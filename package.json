@@ -9,12 +9,16 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@tabler/icons-react": "^3.34.1",
     "@tailwindcss/postcss": "^4.1.11",
+    "clsx": "^2.1.1",
     "mapbox-gl": "^3.14.0",
+    "motion": "^12.23.12",
     "next": "15.4.5",
     "postcss": "^8.5.6",
     "react": "19.1.0",
     "react-dom": "19.1.0",
+    "tailwind-merge": "^3.3.1",
     "tailwindcss": "^4.1.11"
   },
   "devDependencies": {
