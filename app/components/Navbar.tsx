@@ -5,8 +5,6 @@ import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "motion/
 import { cn } from "../lib/utils";
 import { IconMenu2, IconX } from "@tabler/icons-react";
 
-// --- INTERFACES ---
-
 interface NavbarProps {
   children: React.ReactNode;
   className?: string;
@@ -121,7 +119,7 @@ export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
   );
 };
 
-// --- NAVBAR LOGO ---
+
 
 export const NavbarLogo = () => (
   <a
@@ -136,12 +134,9 @@ export const NavbarLogo = () => (
       height={32}
       className="rounded"
     />
-    <span>VIT Navigator</span>
+    <span>V-Nav</span>
   </a>
 );
-
-// --- MOBILE NAVIGATION COMPONENTS (OPTIONAL) ---
-// You may complete these as in your previous files, if you want to add mobile hamburger, just like in Aceternity.
 
 export const NavbarButton = ({
   href,
@@ -172,7 +167,6 @@ export const NavbarButton = ({
   };
 
   return (
-    // Note: Tag may be "a" or "button". We intentionally not pass `href` to a button type
     <Tag href={href} className={cn(base, variants[variant], className)} {...props}>
       {children}
     </Tag>

@@ -2,11 +2,11 @@
 
 import MapboxMap from "./components/MapboxMap";
 import { Navbar, NavBody, NavItems, NavbarLogo, NavbarButton } from "./components/Navbar";
+import AddEventPage from "./components/AddEvent";
 
 const navItems = [
-  { name: "Home", link: "#" },
-  { name: "Map", link: "#map" },
-  { name: "Events", link: "#events" },
+  { name: "Find a Spot", link: "#" },
+  { name: "Find My Friend", link: "#events" },
 ];
 
 export default function Home() {
@@ -21,9 +21,9 @@ export default function Home() {
           w-[92vw] max-w-4xl
           -translate-x-1/2
           rounded-full
-          border border-black-100/60 dark:border-neutral-900/80
+          border border-gray-100/60 dark:border-neutral-900/80
           shadow-xl
-          bg-inherit
+          bg-white/80 dark:bg-neutral-900/80
           backdrop-blur-lg
         "
       >
@@ -31,8 +31,8 @@ export default function Home() {
           <NavbarLogo />
           <NavItems items={navItems} />
           <div className="hidden md:flex gap-2">
-            <NavbarButton variant="secondary">Login</NavbarButton>
-            <NavbarButton variant="primary">Book a call</NavbarButton>
+            <NavbarButton variant="secondary">DeActivate</NavbarButton>
+            <NavbarButton variant="primary">Profile</NavbarButton>
           </div>
         </NavBody>
       </Navbar>
@@ -43,14 +43,21 @@ export default function Home() {
           bg-gray-100 dark:bg-neutral-950
           pt-32 px-4 sm:px-6 lg:px-8
           transition-colors
+          space-y-12
+          w-full
         "
       >
-        <h1 className="mb-6 text-center text-3xl font-semibold text-gray-900 dark:text-white">
+        <h1 className="text-center text-3xl font-semibold text-gray-900 dark:text-white">
           Campus Map
         </h1>
 
         <div className="w-full max-w-5xl h-[600px] rounded-lg shadow-lg overflow-hidden">
           <MapboxMap />
+        </div>
+
+        {/* Add Event Page below the map */}
+        <div className="w-full max-w-5xl">
+          <AddEventPage />
         </div>
       </main>
     </>
