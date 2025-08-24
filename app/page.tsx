@@ -1,18 +1,24 @@
 "use client";
 
+import Footer from "./components/Footer";
 import MapboxMap from "./components/MapboxMap";
-import { Navbar, NavBody, NavItems, NavbarLogo, NavbarButton } from "./components/Navbar";
+import {
+  Navbar,
+  NavBody,
+  NavItems,
+  NavbarLogo,
+  NavbarButton,
+} from "./components/Navbar";
 import AddEventPage from "./components/AddEvent";
+import SearchBar from "./components/SearchBar";
+import AccountToggle from "./components/AccountToggle";
 
-const navItems = [
-  { name: "Find a Spot", link: "#" },
-  { name: "Find My Friend", link: "#events" },
-];
+const navItems = [{ name: "Find a Spot", link: "#" }];
 
 export default function Home() {
   return (
     <>
-      {/* Floating navbar that inherits the page background (syncs with RootLayout) */}
+      {/* Floating navbar */}
       <Navbar
         className="
           fixed
@@ -30,8 +36,13 @@ export default function Home() {
         <NavBody>
           <NavbarLogo />
           <NavItems items={navItems} />
+
+          {/* ✅ upgraded search bar */}
+          <SearchBar />
+
+          {/* ✅ account toggle instead of hardcoded buttons */}
           <div className="hidden md:flex gap-2">
-            <NavbarButton variant="secondary">DeActivate</NavbarButton>
+            <AccountToggle />
             <NavbarButton variant="primary">Profile</NavbarButton>
           </div>
         </NavBody>
@@ -55,11 +66,12 @@ export default function Home() {
           <MapboxMap />
         </div>
 
-        {/* Add Event Page below the map */}
         <div className="w-full max-w-5xl">
           <AddEventPage />
         </div>
       </main>
+
+      <Footer />
     </>
   );
 }

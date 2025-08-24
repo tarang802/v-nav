@@ -1,9 +1,8 @@
 "use client";
 
 import React, { useRef, useState } from "react";
-import { motion, useScroll, useMotionValueEvent, AnimatePresence } from "motion/react";
+import { motion, useScroll, useMotionValueEvent } from "motion/react";
 import { cn } from "../lib/utils";
-import { IconMenu2, IconX } from "@tabler/icons-react";
 
 interface NavbarProps {
   children: React.ReactNode;
@@ -23,7 +22,6 @@ interface NavItemsProps {
 }
 
 // --- MAIN NAVBAR ---
-
 export const Navbar = ({ children, className }: NavbarProps) => {
   const ref = useRef<HTMLDivElement>(null);
   const { scrollY } = useScroll({ target: ref, offset: ["start start", "end start"] });
@@ -37,21 +35,16 @@ export const Navbar = ({ children, className }: NavbarProps) => {
     <motion.nav
       ref={ref}
       className={cn(
-        // Floating, fixed, blurred, shadow, rounded, responsive for mobile!
         "fixed top-5 left-1/2 z-50 w-[92vw] max-w-4xl -translate-x-1/2",
-        // Border tuned for light/dark
         "rounded-full border border-black/60 dark:border-neutral-900/80",
-        // inherit page background so navbar syncs with RootLayout
         "shadow-xl bg-inherit backdrop-blur-lg",
         className
       )}
       animate={{
-        // keep y stable; only animate shadow for the scroll effect
         y: 0,
         boxShadow: visible
           ? "0px 12px 40px 0px rgba(34,42,53,0.11), 0 2px 8px rgba(34,42,53,0.10)"
           : "0 0 24px rgba(34,42,53,0.06), 0 1px 1px rgba(0,0,0,0.03)",
-        // note: no hard-coded background here; bg-inherit from CSS handles color
       }}
       transition={{ type: "spring", stiffness: 180, damping: 36, mass: 0.6 }}
     >
@@ -65,62 +58,44 @@ export const Navbar = ({ children, className }: NavbarProps) => {
 };
 
 // --- NAVBAR BODY ---
-
-export const NavBody = ({ children, className }: NavBodyProps) => {
-  return (
-    <div
-      className={cn(
-        "flex flex-row items-center justify-between px-6 h-16",
-        "w-full",
-        className
-      )}
-    >
-      {children}
-    </div>
-  );
-};
+export const NavBody = ({ children, className }: NavBodyProps) => (
+  <div
+    className={cn(
+      "flex flex-row items-center justify-between px-6 h-16",
+      "w-full",
+      className
+    )}
+  >
+    {children}
+  </div>
+);
 
 // --- NAV ITEMS ---
+export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => (
+  <div
+    className={cn(
+      "hidden md:flex flex-row space-x-2 items-center text-[15px] font-medium",
+      "text-gray-700 dark:text-gray-300",
+      className
+    )}
+  >
+    {items.map((item) => (
+      <a
+        key={item.name}
+        href={item.link}
+        onClick={onItemClick}
+        className={cn(
+          "px-4 py-2 rounded-full transition-colors duration-150",
+          "hover:bg-gray-100/80 dark:hover:bg-neutral-800/60"
+        )}
+      >
+        {item.name}
+      </a>
+    ))}
+  </div>
+);
 
-export const NavItems = ({ items, className, onItemClick }: NavItemsProps) => {
-  const [hovered, setHovered] = useState<number | null>(null);
-
-  return (
-    <div
-      className={cn(
-        "hidden md:flex flex-row space-x-2 items-center text-[15px] font-medium",
-        "text-gray-700 dark:text-gray-300",
-        className
-      )}
-    >
-      {items.map((item, idx) => (
-        <a
-          key={item.name}
-          href={item.link}
-          onMouseEnter={() => setHovered(idx)}
-          onMouseLeave={() => setHovered(null)}
-          onClick={onItemClick}
-          className={cn(
-            "relative px-4 py-2 rounded-full transition-colors duration-150",
-            "hover:bg-gray-100/80 dark:hover:bg-neutral-800/60"
-          )}
-        >
-          {hovered === idx && (
-            <motion.div
-              layoutId="nav-hover"
-              className="absolute inset-0 rounded-full bg-gray-200/60 dark:bg-neutral-800/50 z-0"
-              transition={{ type: "spring", duration: 0.25 }}
-            />
-          )}
-          <span className="relative z-10">{item.name}</span>
-        </a>
-      ))}
-    </div>
-  );
-};
-
-
-
+// --- LOGO ---
 export const NavbarLogo = () => (
   <a
     href="#"
@@ -138,6 +113,7 @@ export const NavbarLogo = () => (
   </a>
 );
 
+// --- BUTTON ---
 export const NavbarButton = ({
   href,
   as: Tag = "a",
