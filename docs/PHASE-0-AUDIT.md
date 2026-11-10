@@ -80,7 +80,7 @@ These conflict with the brief's "no fake data, no non-functional buttons" rule.
 |---|---|
 | `PORT`, `MONGO_URI`, `JWT_SECRET`, `CLIENT_ORIGIN` | `VITE_MAPBOX_TOKEN`, `VITE_API_URL`, `VITE_SOCKET_URL` |
 
-New ones needed: `REDIS_URL`, `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` (or a single secret + rotation), `COOKIE_DOMAIN`, `SMTP_*` (OTP mail), `ALLOWED_EMAIL_DOMAINS` (e.g. `vitstudent.ac.in`), `LOG_LEVEL`, `OTEL_EXPORTER_OTLP_ENDPOINT` (optional), upload storage config.
+New ones needed: see the full list in [DEPLOYMENT.md §4](DEPLOYMENT.md) (supersedes this preliminary list).
 
 `client/.env.example` sets `VITE_API_URL=http://localhost:3000`, which contradicts the README ("leave empty in dev").
 
@@ -115,7 +115,7 @@ Each phase ends with passing tests and a short report before the next starts.
 | **3 Friends** | `Friendship` (sorted pair, unique), `FriendRequest` (unique pending per pair), `Block` collections; send / accept (transaction) / reject / cancel / remove / block / unblock; friend-code lookup with enumeration-resistant responses. | Tests for every prevention rule in the brief. |
 | **4 Real-time location** | Redis adapter; per-user rooms; server-side sharing state (incl. timed sharing) in Redis; per-delivery friendship + block + sharing checks backed by a Redis friend-set cache invalidated on every friendship change; force-revoke on unfriend/block/stop; multi-tab aware presence; server rate limit + bounds check (campus bounding box); client movement threshold + adaptive interval. | Socket tests incl. two server instances through Redis. |
 | **5 Map** | Single map-first shell; GeoJSON sources + symbol layers for friends/events with clustering (no DOM markers per item); map state isolated from React re-renders; verified building layer with hover/click. | Playwright map tests. |
-| **6 Events** | *(Your message was cut off here; I'll plan Phase 6 onward once I have the rest.)* | |
+| **6–9** | Events, frontend integration, testing + load tests, deployment. Tracked in [DEVELOPMENT_PROGRESS.md](../DEVELOPMENT_PROGRESS.md). | |
 
 ---
 
