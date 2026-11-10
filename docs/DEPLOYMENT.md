@@ -50,7 +50,14 @@ npm --prefix server test
 docker compose --profile api up -d --build
 ```
 
-`docker-compose.multi.yml` (two API instances behind Nginx on port 8080, for cross-instance Socket.IO tests) is added in **Phase 4**, where it is first needed.
+`docker-compose.multi.yml` (**implemented in Phase 4**): two API instances (`api1`, `api2`) behind Nginx on http://localhost:8080 (`ops/nginx/multi.conf`), for cross-instance Socket.IO and failover tests:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.multi.yml up -d --build
+```
+```bash
+docker compose -f docker-compose.yml -f docker-compose.multi.yml stop api2
+```
+The second command shows graceful failover: `api2`'s sockets receive `server:shutdown`, reconnect through Nginx to `api1`, and `api2` exits with code 0. Load-balancer requirements this exposed (apply to any production LB): WebSocket upgrades allowed; balance by open connections (`least_conn`), not request count; share balancing state across workers (Nginx `zone`); a short upstream connect timeout with fail-over to the next instance, or active health checks on `/ready`; idle timeout above the 25 s Socket.IO ping interval.
 
 ---
 
@@ -89,7 +96,7 @@ Recommendation is finalised in Phase 9 after staging tests; nothing in the code 
 ### Release process
 1. CI on PR: lint, type-check, tests, `npm audit`, gitleaks, image build.
 2. Merge to `main` → build and push image tagged with commit SHA → deploy to staging → smoke tests.
-3. Manual approval → production rolling deploy; `/ready` gates traffic; graceful shutdown drains old instances.
+3. Manual approval → production rolling deploy; `/ready` gates traffic; graceful shutdown drains old instances. Shutdown order: `/ready` → 503, stop accepting connections, tell sockets to reconnect and close them, drain HTTP (max 6 s), close Redis and MongoDB, exit 0; forced exit after 9 s, inside the usual 10 s grace period before SIGKILL.
 4. `npm run db:indexes` runs as a release step before new code takes traffic (index builds are backward compatible).
 5. Rollback = redeploy previous image tag.
 
@@ -116,7 +123,8 @@ Placeholders only; real values live in the host's secret manager.
 | `ALLOWED_EMAIL_DOMAINS` | `vitstudent.ac.in` | yes |
 | `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, `MAIL_FROM` | provider values | yes (user/pass optional) |
 | `APP_PUBLIC_URL` | `https://app.vnav.example` (links in emails) | yes |
-| `CAMPUS_BOUNDARY_FILE` | path to campus polygon GeoJSON | yes |
+| `CAMPUS_BOUNDARY_FILE` | path to campus polygon GeoJSON (default `data/campus-boundary.geojson`, shipped in the image) | no |
+| `INSTANCE_ID` | label for this replica (default hostname:pid) | no |
 | `STORAGE_DRIVER` | `local` \| `s3` | yes |
 | `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL` | provider values | if `s3` |
 | `LOG_LEVEL` | `info` | no |

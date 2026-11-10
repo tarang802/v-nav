@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import type { Container } from '../container.js';
 import { createAuthController } from '../controllers/authController.js';
+import { createLocationController } from '../controllers/locationController.js';
 import { createSocialController } from '../controllers/socialController.js';
 import { createUserController } from '../controllers/userController.js';
 import { authenticate, requireCsrfHeaders } from '../middleware/auth.js';
@@ -29,7 +30,8 @@ import {
 export function createV1Router(c: Container): Router {
   const router = Router();
   const auth = createAuthController(c.services.auth, { cookieSecure: c.config.cookieSecure });
-  const users = createUserController(c.repos.users);
+  const users = createUserController(c.repos.users, c.events);
+  const location = createLocationController(c.services.location);
   const social = createSocialController(c.services.friends, c.services.sessions);
 
   const ipLimit = globalIpLimit(c.services.limiter);
@@ -76,6 +78,10 @@ export function createV1Router(c: Container): Router {
   router.get('/blocks', ...authed, validate({ query: pageQuery }), social.listBlocks);
   router.post('/blocks', ...authed, validate({ body: blockBody }), social.block);
   router.delete('/blocks/:userId', ...authed, validate({ params: userIdParams }), social.unblock);
+
+  // ── Location (own state only) ──
+  router.get('/location/sharing', ...authed, location.sharing);
+  router.post('/location/sharing/stop', ...authed, location.stop);
 
   return router;
 }

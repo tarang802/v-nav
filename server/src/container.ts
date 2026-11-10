@@ -16,6 +16,11 @@ import { RateLimiter } from './services/rateLimiter.js';
 import { SessionService } from './services/sessionService.js';
 import { TokenService } from './services/tokenService.js';
 import { EmailOtpVerifier } from './services/verificationService.js';
+import { DomainEvents } from './events/domainEvents.js';
+import { Geofence } from './realtime/geofence.js';
+import { LocationService } from './services/locationService.js';
+import { LocationStore } from './services/locationStore.js';
+import { PresenceService } from './services/presenceService.js';
 import { FriendService } from './services/friendService.js';
 import { RelationshipCache } from './services/relationshipCache.js';
 
@@ -31,6 +36,7 @@ export interface Container {
   redis: Redis;
   models: Models;
   lifecycle: Lifecycle;
+  events: DomainEvents;
   repos: { users: UserRepository; social: SocialRepository };
   services: {
     tokens: TokenService;
@@ -39,12 +45,15 @@ export interface Container {
     auth: AuthService;
     relationships: RelationshipCache;
     friends: FriendService;
+    location: LocationService;
+    presence: PresenceService;
   };
 }
 
 export interface ContainerOverrides {
   mailTransport?: MailTransport;
   passwordService?: PasswordService;
+  geofence?: Geofence;
 }
 
 /** Composition root: the only place that wires concrete implementations together. */
@@ -56,6 +65,7 @@ export function buildContainer(
   overrides: ContainerOverrides = {},
 ): Container {
   const models = registerModels(mongo);
+  const events = new DomainEvents(logger);
   const users = new UserRepository(models);
   const sessionsRepo = new SessionRepository(models);
   const codes = new VerificationCodeRepository(models);
@@ -63,7 +73,7 @@ export function buildContainer(
   const social = new SocialRepository(models);
 
   const tokens = new TokenService(config.secrets.jwtAccess);
-  const sessions = new SessionService(sessionsRepo, tokens, redis, config.secrets.ipHash);
+  const sessions = new SessionService(sessionsRepo, tokens, redis, config.secrets.ipHash, events);
   const limiter = new RateLimiter(redis);
   const mail = new MailService(overrides.mailTransport ?? new SmtpMailTransport(config.smtp, logger), config.appPublicUrl);
   const passwords = overrides.passwordService ?? new PasswordService();
@@ -85,7 +95,15 @@ export function buildContainer(
   });
 
   const relationships = new RelationshipCache(redis, social, logger);
-  const friends = new FriendService({ mongo, users, social, cache: relationships, limiter, audit, logger });
+  const friends = new FriendService({ mongo, users, social, cache: relationships, limiter, audit, events, logger });
+  const geofence = overrides.geofence ?? Geofence.fromFile(config.campusBoundaryFile);
+  const location = new LocationService(new LocationStore(redis), relationships, geofence, events);
+  const presence = new PresenceService(redis);
+
+  // Signing out of every device also ends location sharing, whether or not a socket is connected.
+  events.on('session.revoked', async ({ userId, allSessions }) => {
+    if (allSessions) await location.stop(userId, 'signed_out');
+  });
 
   return {
     config,
@@ -94,7 +112,8 @@ export function buildContainer(
     redis,
     models,
     lifecycle: { shuttingDown: false },
+    events,
     repos: { users, social },
-    services: { tokens, sessions, limiter, auth, relationships, friends },
+    services: { tokens, sessions, limiter, auth, relationships, friends, location, presence },
   };
 }

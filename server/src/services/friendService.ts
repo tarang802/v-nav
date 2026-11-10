@@ -3,6 +3,7 @@ import { ErrorCode } from '../constants/errorCodes.js';
 import { MAX_OUTGOING_REQUESTS } from '../constants/social.js';
 import type { FriendRequest } from '../models/FriendRequest.js';
 import type { User } from '../models/User.js';
+import type { DomainEvents } from '../events/domainEvents.js';
 import type { Logger } from '../observability/logger.js';
 import type { SocialRepository } from '../repositories/socialRepository.js';
 import type { UserRepository } from '../repositories/userRepository.js';
@@ -32,9 +33,6 @@ export type SendRequestResult =
   | { kind: 'requested'; request: { id: string; to: PublicUser; createdAt: Date } }
   | { kind: 'accepted'; friend: FriendUser };
 
-/** Called after an unfriend or block ends a relationship. Phase 4 uses it to stop location delivery. */
-export type RelationshipEndedListener = (a: Id, b: Id) => void | Promise<void>;
-
 export interface FriendServiceDeps {
   mongo: Connection;
   users: UserRepository;
@@ -42,6 +40,7 @@ export interface FriendServiceDeps {
   cache: RelationshipCache;
   limiter: RateLimiter;
   audit: AuditService;
+  events: DomainEvents;
   logger: Logger;
 }
 
@@ -55,13 +54,7 @@ const requestNotFound = () => AppError.notFound('Friend request not found');
  * invalidated only after the commit.
  */
 export class FriendService {
-  private readonly endedListeners: RelationshipEndedListener[] = [];
-
   constructor(private readonly d: FriendServiceDeps) {}
-
-  onRelationshipEnded(listener: RelationshipEndedListener): void {
-    this.endedListeners.push(listener);
-  }
 
   // ── Lookup ───────────────────────────────────────────────────────────────
 
@@ -156,9 +149,11 @@ export class FriendService {
 
     if (outcome.kind === 'accepted') {
       await this.d.cache.invalidate(['friends'], [viewerId, target._id]);
+      await this.d.events.emit('friend.created', { a: viewerId, b: target._id, since: outcome.since });
       return { kind: 'accepted', friend: toFriendUser(target, outcome.since) };
     }
     const req = outcome.request;
+    await this.d.events.emit('friend.requestCreated', { requestId: req._id, from: viewerId, to: target._id, createdAt: req.createdAt });
     return {
       kind: 'requested',
       request: { id: req._id.toHexString(), to: toPublicUser(target), createdAt: req.createdAt },
@@ -173,6 +168,7 @@ export class FriendService {
       return { since: r.since, friendId: req.from };
     });
     await this.d.cache.invalidate(['friends'], [viewerId, friendId]);
+    await this.d.events.emit('friend.created', { a: viewerId, b: friendId, since });
     const friend = await this.d.users.findActiveById(friendId);
     if (!friend) throw requestNotFound();
     return { friend: toFriendUser(friend, since) };
@@ -263,7 +259,7 @@ export class FriendService {
       await this.d.users.decrementFriendCount(friendId, session);
     });
     await this.d.cache.invalidate(['friends'], [viewerId, friendId]);
-    await this.emitEnded(viewerId, friendId);
+    await this.d.events.emit('friend.ended', { a: viewerId, b: friendId });
   }
 
   // ── Blocks ───────────────────────────────────────────────────────────────
@@ -286,7 +282,7 @@ export class FriendService {
     });
 
     await this.d.cache.invalidate(['friends', 'blocks'], [viewerId, targetId]);
-    await this.emitEnded(viewerId, targetId);
+    await this.d.events.emit('friend.ended', { a: viewerId, b: targetId });
     if (created) await this.d.audit.record({ action: 'user_blocked', actorId: viewerId, targetId, ipHash });
   }
 
@@ -327,13 +323,4 @@ export class FriendService {
     return { page, nextCursor };
   }
 
-  private async emitEnded(a: Id, b: Id) {
-    for (const listener of this.endedListeners) {
-      try {
-        await listener(a, b);
-      } catch (err) {
-        this.d.logger.error({ err }, 'relationship-ended listener failed');
-      }
-    }
-  }
 }

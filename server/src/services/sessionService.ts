@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { Redis } from 'ioredis';
 import type { Types } from 'mongoose';
 import { ACCESS_TOKEN_TTL_SECONDS, SESSION_IDLE_TTL_MS, type Role } from '../constants/auth.js';
+import type { DomainEvents } from '../events/domainEvents.js';
 import type { Session } from '../models/Session.js';
 import type { SessionRepository } from '../repositories/sessionRepository.js';
 import { AppError } from '../utils/AppError.js';
@@ -27,14 +28,12 @@ const revokedKey = (sid: string) => `session:revoked:${sid}`;
  * still-valid access tokens of revoked sessions stop working immediately.
  */
 export class SessionService {
-  /** Hook for Phase 4: disconnect sockets of revoked sessions. */
-  onRevoked: (userId: Types.ObjectId, sessionIds: Types.ObjectId[], reason: string) => void = () => {};
-
   constructor(
     private readonly sessions: SessionRepository,
     private readonly tokens: TokenService,
     private readonly redis: Redis,
     private readonly ipHashSecret: string,
+    private readonly events: DomainEvents,
   ) {}
 
   hashIp(ip: string) {
@@ -81,7 +80,7 @@ export class SessionService {
   async revokeOne(userId: Types.ObjectId, sessionId: Types.ObjectId, reason: string): Promise<boolean> {
     const ids = await this.sessions.revoke({ _id: sessionId, userId }, reason);
     await this.denylist(ids);
-    if (ids.length) this.onRevoked(userId, ids, reason);
+    if (ids.length) await this.events.emit('session.revoked', { userId, sessionIds: ids, reason, allSessions: false });
     return ids.length > 0;
   }
 
@@ -91,7 +90,10 @@ export class SessionService {
       reason,
     );
     await this.denylist(ids);
-    if (ids.length) this.onRevoked(userId, ids, reason);
+    if (ids.length) {
+      // Sockets of revoked sessions are disconnected by the real-time layer, on every instance.
+      await this.events.emit('session.revoked', { userId, sessionIds: ids, reason, allSessions: !exceptSessionId });
+    }
     return ids.length;
   }
 

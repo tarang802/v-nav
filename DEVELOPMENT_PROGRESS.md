@@ -1,6 +1,6 @@
 # V-Nav Development Progress
 
-Last updated: 2026-11-11 (Phase 3)
+Last updated: 2026-11-11 (Phase 4)
 
 A module counts as **complete** only when its code exists, its tests have been run and pass, and the result is recorded below. Generated code alone counts as "in progress".
 
@@ -15,7 +15,7 @@ A module counts as **complete** only when its code exists, its tests have been r
 | 1 — Architecture | Architecture, schema, API, sockets, security, scalability, deployment, load-test plan | ✅ Approved 2026-11-10 with defaults Q1–Q5 |
 | 2 — Backend foundation | TS server skeleton, config, logging, errors, validation, MongoDB + Redis, health/ready, graceful shutdown, auth + email OTP + sessions, Docker Compose | ✅ Done — 53 tests passing (see below) |
 | 3 — Friend system | Friend codes, requests, friendships, blocks, lists | ✅ Done — 82 tests passing (see below) |
-| 4 — Real-time location | Socket auth, Redis adapter, sharing state, friend-only delivery, revocation, presence, reconnection | ⬜ |
+| 4 — Real-time location | Socket auth, Redis adapter, sharing state, friend-only delivery, revocation, presence, reconnection | ✅ Done — 111 tests passing, two-instance stack verified (see below) |
 | 5 — Map | Persistent map shell, verified buildings layer, friend and event layers, clustering | ⬜ |
 | 6 — Events | CRUD, visibility, discovery, filters, pagination, map integration, images | ⬜ |
 | 7 — Frontend integration | Connect every screen to real APIs and sockets; remove mock/dead UI; responsive + mobile sheets | ⬜ |
@@ -47,10 +47,21 @@ A module counts as **complete** only when its code exists, its tests have been r
   - Friend list with cursor pagination; unfriend.
   - Blocks: remove the friendship and pending requests both ways in one transaction; blocked and unknown users get an identical 404 everywhere; block/unblock are idempotent; unblock does not restore the friendship; both are audit-logged.
   - Redis relationship cache (`friends:{id}`, `blocks:{id}`, 10 min) with a generation guard so a slow reader cannot write a stale list back after an unfriend or block; falls back to MongoDB on a miss or a Redis error. `FriendService.onRelationshipEnded` hook for Phase 4 location revocation.
+- **Phase 4 real-time location** (`socket.io` 4.8, `@socket.io/redis-adapter` 8.3):
+  - Handshake: access token from `auth.token` only, signature + expiry + Redis revocation + active-user check, Origin allowlist (CORS does not cover WebSockets); machine-readable rejection codes.
+  - Sharing: `location:share:start` (15 / 60 / 240 min or until stopped, 12 h cap), stop over the socket or the REST emergency stop, state synced to the user's other tabs, timed expiry by a sweeper where exactly one instance notifies friends.
+  - `location:update` pipeline: schema and clock skew → accuracy ≤ 100 m → 2 s per-user rate limit (shared across tabs and instances) → sharing check → campus geofence (real OSM boundary) → Redis store with 120 s TTL → delivery to friends only. No MongoDB access in the hot path except a friend-cache miss; **positions are never written to MongoDB** (tested).
+  - Revocation: unfriend, block, sign-out and expiry remove the marker from friends' maps immediately and stop further delivery; the blocked student only sees a removal.
+  - Presence across tabs, devices and instances (first tab online, last tab offline, crashed instances self-heal within 90 s), respecting `showOnlineStatus` including live changes; `lastSeenAt` written once per final disconnect.
+  - Social notifications: `friend:request:received`, `friend:request:accepted` (with immediate location if the new friend is sharing), `friendship:removed`.
+  - Domain event bus (`src/events/domainEvents.ts`): services publish, the socket layer subscribes; services never import Socket.IO.
+  - Token-expiry sweep with `auth:refresh`; per-socket flood guard; 16 kB frame limit.
+  - Graceful shutdown with live sockets: stop accepting, `server:shutdown`, close transports so clients auto-reconnect elsewhere, drain, exit 0 within Docker's 10 s grace.
+  - `docker-compose.multi.yml` + `ops/nginx/multi.conf`: two instances behind Nginx.
 - The pre-rebuild server moved to `server-legacy/` (unchanged, still runnable) so the current client keeps working until Phase 7, when it is deleted.
 
 ## Pending modules
-Phases 4–9. Phase 0.5 dead-file cleanup is folded into Phase 7.
+Phases 5–9. Phase 0.5 dead-file cleanup is folded into Phase 7.
 
 ## Phase 2 deviations from the Phase 1 docs (docs updated)
 | Change | Why |
@@ -73,6 +84,18 @@ Phases 4–9. Phase 0.5 dead-file cleanup is folded into Phase 7.
 | New error `403 FRIEND_REQUESTS_DISABLED` | Distinguishes "this student turned off requests" from "not found". |
 | `GET /users/lookup` also returns `acceptsRequests` | Lets the UI disable the Add button instead of failing after a tap. |
 | `FriendUser.online` not returned yet | Presence is built in Phase 4; returning `false` now would be fake data. `lastSeenAt` is returned, respecting `showOnlineStatus`. |
+
+## Phase 4 deviations from the Phase 1 docs (docs updated)
+| Change | Why |
+|---|---|
+| Sockets also join `session:{sessionId}` | Disconnecting one signed-out session on every instance is a room emit; no cross-instance socket scan. |
+| Presence refreshed by the server every 30 s for its own sockets (client heartbeat optional) | Presence no longer depends on client behaviour; entries of a crashed instance expire on their own. |
+| Presence hash values are expiry times, not instance ids | Lets the Lua scripts drop stale entries, so "last tab closed" is detected correctly even after an instance crash. |
+| New `auth:expired` server event | Distinguishes token expiry from revocation so the client knows to refresh and reconnect rather than sign out. |
+| `friend:request:accepted` goes to both users | Both sides need to add the friend to their list; the acceptor's other tabs too. |
+| Signing out of every session stops sharing; one device does not | Another device may still be legitimately sharing. |
+| Shutdown stops accepting before closing sockets, closes transports instead of disconnecting sockets, and fits in 9 s | Found with the two-instance stack: a server-side disconnect stops socket.io-client from reconnecting, reconnects landed back on the draining instance, and the old 20 s timer was cut by Docker's 10 s SIGKILL. Regression test in `test/integration/shutdown.test.ts`. |
+| Local Nginx: `zone`, `least_conn`, 2 s connect timeout, `max_fails` | Without them all sockets landed on one instance (per-worker balancing) and failover reconnects hung on the stopped container's address. |
 
 ## Not yet implemented (deliberately)
 | Feature | Reason |
@@ -122,7 +145,9 @@ Full reasoning in [docs/ARCHITECTURE.md §3](docs/ARCHITECTURE.md). Summary:
 - Behaviour when Redis goes down mid-request is designed to fail closed (503) but has **no automated test** yet; planned for Phase 8 with a fault-injection test.
 - Sockets are not disconnected on session revocation yet (`SessionService.onRevoked` hook exists; wired in Phase 4).
 - Suspension / roles have no admin endpoints yet (`requireRole` exists, unused).
-- Relationship-cache invalidation runs after the database commit. If that Redis call fails, the stale entry can survive until its 10-minute TTL; the failure is logged at error level. Phase 4 must decide whether location delivery accepts that window or re-checks MongoDB for revocations.
+- Relationship-cache invalidation runs after the database commit. If that Redis call fails, the stale entry can survive until its 10-minute TTL (logged at error level). Decision in Phase 4: accepted, because every location update also needs Redis (rate limit, sharing flag, store); while Redis is failing, updates are not delivered at all, so the stale entry cannot leak positions in practice. Revisit if Redis gets a partial-failure mode (e.g. cluster) in Phase 9.
+- No socket-level metrics yet (connected clients, updates/s, fan-out size); planned with `/metrics` in Phase 9. Load tests for 500 sockets / 200 sharers are Phase 8; **none have been run**.
+- `event:changed` is Phase 6.
 - Avatars (`PUT /users/me/avatar`) and account deletion (`DELETE /users/me`) are not built yet; they need the upload pipeline (Phase 6) and a full cascade (Phase 8).
 
 ## Tests executed
@@ -138,5 +163,10 @@ Full reasoning in [docs/ARCHITECTURE.md §3](docs/ARCHITECTURE.md). Summary:
 | 2026-11-11 | `server: npm test`: 26 unit, 56 integration (29 new for Phase 3, including concurrent crossing requests ×5 rounds, 5 concurrent duplicate sends, and transaction rollback at the friend cap) | ✅ 82/82 passed, 3 consecutive runs |
 | 2026-11-11 | `server: tsc --noEmit`, `npm run build`, `npm audit --omit=dev` | ✅ 0 vulnerabilities |
 | 2026-11-11 | `npm run db:indexes` against the dev database; indexes on `friend_requests`, `friendships`, `blocks` checked in mongosh | ✅ |
+
+| 2026-11-11 | `server: npm test`: 29 unit, 82 integration (25 socket tests incl. two in-process instances sharing Redis, 1 shutdown test) | ✅ 111/111 passed, 3 consecutive runs |
+| 2026-11-11 | `tsc --noEmit`, `npm run build`, `npm audit` | ✅ 0 vulnerabilities |
+| 2026-11-11 | Manual: `docker-compose.multi.yml` (api1 + api2 behind Nginx). Register two students via Mailpit OTP, befriend, A shares, B opens 6 tabs: sockets split 4/3 across instances, 6/6 tabs received A's location, 6/6 got the REST stop removal | ✅ |
+| 2026-11-11 | Manual: stop `api2` with 3 of 6 sockets on it: 3 `server:shutdown`, 3 automatic reconnects to `api1`, 6/6 connected afterwards, `api2` exit code 0 in < 1 s | ✅ (after fixing the shutdown bugs listed above) |
 
 Load tests: none run yet (Phase 8).

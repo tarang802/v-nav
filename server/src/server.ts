@@ -3,13 +3,15 @@ import type { Socket } from 'node:net';
 import { createApp } from './app.js';
 import { connectMongo } from './config/db.js';
 import { ConfigError, loadConfig } from './config/env.js';
-import { connectRedis } from './config/redis.js';
+import { connectRedis, connectRedisPubSub } from './config/redis.js';
 import { buildContainer, type Container } from './container.js';
 import { syncAllIndexes } from './models/index.js';
 import { createLogger } from './observability/logger.js';
+import { attachRealtime, type RealtimeServer } from './realtime/socketServer.js';
 
-const DRAIN_TIMEOUT_MS = 10_000;
-const HARD_EXIT_MS = 20_000;
+// Both fit inside the default 10 s grace period that Docker and most platforms give before SIGKILL.
+const DRAIN_TIMEOUT_MS = 6_000;
+const HARD_EXIT_MS = 9_000;
 
 async function main() {
   let config;
@@ -44,12 +46,14 @@ async function main() {
     s.on('close', () => sockets.delete(s));
   });
 
+  const realtime = attachRealtime(server, container, await connectRedisPubSub(config, logger));
+
   server.listen(config.port, () => logger.info({ port: config.port, env: config.env }, 'api listening'));
 
-  registerShutdown(container, server, sockets);
+  registerShutdown(container, server, sockets, realtime);
 }
 
-function registerShutdown(c: Container, server: Server, sockets: Set<Socket>) {
+function registerShutdown(c: Container, server: Server, sockets: Set<Socket>, realtime: RealtimeServer) {
   let started = false;
   const shutdown = async (signal: string) => {
     if (started) return;
@@ -63,17 +67,19 @@ function registerShutdown(c: Container, server: Server, sockets: Set<Socket>) {
     }, HARD_EXIT_MS);
     hardExit.unref();
 
-    // Phase 4: emit server:shutdown to sockets and stop jobs here.
+    // 1. Stop accepting connections, so reconnecting clients reach a healthy instance.
+    const drained = new Promise<void>((resolve) => server.close(() => resolve()));
+    server.closeIdleConnections();
 
-    await new Promise<void>((resolve) => {
-      server.close(() => resolve());
-      server.closeIdleConnections();
-      setTimeout(() => {
-        for (const s of sockets) s.destroy();
-        resolve();
-      }, DRAIN_TIMEOUT_MS).unref();
-    });
+    // 2. Tell sockets to reconnect, then close them.
+    await realtime.close();
+    c.logger.info('realtime closed');
 
+    // 3. Let in-flight HTTP requests finish, up to the drain timeout.
+    await Promise.race([drained, new Promise((resolve) => setTimeout(resolve, DRAIN_TIMEOUT_MS).unref())]);
+    for (const s of sockets) s.destroy();
+
+    c.logger.info('http drained');
     await Promise.allSettled([c.redis.quit(), c.mongo.close()]);
     c.logger.info('shutdown complete');
     process.exit(0);

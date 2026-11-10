@@ -114,6 +114,11 @@ export class UserRepository {
     ).exec();
   }
 
+  /** Written once when a user's last socket disconnects. A timestamp only, never a position. */
+  setLastSeen(id: Types.ObjectId, at: Date) {
+    return this.models.User.updateOne({ _id: id }, { $set: { lastSeenAt: at } }, { timestamps: false }).exec();
+  }
+
   updateProfile(id: Types.ObjectId, data: { name?: string }) {
     return this.models.User.findOneAndUpdate({ _id: id, status: 'active' }, { $set: data }, { new: true })
       .lean<User>()

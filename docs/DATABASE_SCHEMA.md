@@ -204,17 +204,18 @@ Redis is ephemeral. Losing it must never corrupt data; at worst users appear off
 | Key | Type | TTL | Purpose |
 |---|---|---|---|
 | `share:{userId}` | hash `{ startedAt, expiresAt? }` | timed: until expiry; open-ended: 12 h safety cap | Authoritative "is sharing" flag |
-| `share:expiry` | sorted set, score = expiresAt | — | Sweeper finds expired timed shares; `ZREM` return value elects one instance to emit removal |
+| `share:expiry` | sorted set, score = end time (expiry, or the 12 h cap for open-ended shares) | — | Sweeper (every 5 s on each instance) finds ended shares; the `ZREM` return value elects exactly one instance to notify friends |
 | `loc:{userId}` | hash `{ lat, lng, acc, ts }` | 120 s, refreshed per update | Latest position. Expiry = stale detection + automatic deletion |
+| `loc:off:{userId}` | string | 120 s | "Friends were already told this student left campus"; deleted by the next on-campus update |
 | `loc:rl:{userId}` | string | 2 s | Location update rate limit (`SET NX PX`), shared across tabs and instances |
-| `presence:{userId}` | hash `socketId → instanceId` | 90 s, refreshed by heartbeat every 30 s | Online if key exists; multi-tab aware; self-heals if an instance crashes |
+| `presence:{userId}` | hash `socketId → expiry time (ms)` | 90 s; each instance refreshes its own sockets every 30 s | Online while any entry is fresh. Add/remove run in Lua and drop stale entries, so a crashed instance's sockets stop counting within 90 s and the first/last tab is detected exactly once |
 | `friends:{userId}` | set of friend IDs | 10 min | Delivery-time authorisation cache. **Deleted synchronously** after any friendship/block commit |
 | `blocks:{userId}` | set of IDs blocked either way | 10 min | Event visibility and lookup filtering; deleted on block/unblock |
 | `friends:gen:{userId}`, `blocks:gen:{userId}` | counter | 24 h | Bumped on every invalidation. A reader writes a freshly loaded set back only if the counter is unchanged (checked in Lua), so a read that started before an unfriend commits cannot re-cache the old list. Empty lists are cached as the marker member `_`. |
 | `session:revoked:{sessionId}` | string | 15 min (access token lifetime) | Rejects still-valid access tokens of revoked sessions |
 | `rl:{scope}:{key}` | counters | per limit window | HTTP rate limiting (`rate-limit-redis` store) |
 | `login:fail:{email}` | counter | 15 min | Progressive account lockout |
-| Socket.IO adapter channels | pub/sub | — | Cross-instance event delivery (`@socket.io/redis-adapter`) |
+| Socket.IO adapter channels (prefix `vnav`) | pub/sub | — | Cross-instance event delivery (`@socket.io/redis-adapter`), on two dedicated connections |
 
 **Location is never written to MongoDB.** No key holds more than the latest point. There is no history to delete because none is kept.
 

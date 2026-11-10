@@ -14,6 +14,7 @@ RUN apk add --no-cache tini
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --chown=node:node package.json ./
+COPY --chown=node:node data ./data
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=3 \

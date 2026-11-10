@@ -1,3 +1,4 @@
+import { hostname } from 'node:os';
 import { z } from 'zod';
 
 /**
@@ -54,6 +55,11 @@ const EnvSchema = z.object({
   /** Refresh cookie `Secure` flag. Must stay true in production. */
   COOKIE_SECURE: boolFromString.default(true),
 
+  /** GeoJSON Polygon/MultiPolygon of the campus; positions outside it are never shared. */
+  CAMPUS_BOUNDARY_FILE: z.string().min(1).default('data/campus-boundary.geojson'),
+  /** Identifies this process in presence records; defaults to hostname + pid. */
+  INSTANCE_ID: z.string().regex(/^[A-Za-z0-9._:-]{1,64}$/).optional(),
+
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 
@@ -74,6 +80,8 @@ export interface Config {
   smtp: { host: string; port: number; secure: boolean; user?: string; pass?: string; from: string };
   cookieSecure: boolean;
   logLevel: Env['LOG_LEVEL'];
+  campusBoundaryFile: string;
+  instanceId: string;
 }
 
 export class ConfigError extends Error {
@@ -119,5 +127,7 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     },
     cookieSecure: e.COOKIE_SECURE,
     logLevel: e.LOG_LEVEL,
+    campusBoundaryFile: e.CAMPUS_BOUNDARY_FILE,
+    instanceId: e.INSTANCE_ID ?? `${hostname()}:${process.pid}`,
   };
 }

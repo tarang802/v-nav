@@ -269,7 +269,7 @@ describe('friendships', () => {
     expect(await cache.areFriends(oid(a), oid(b))).toBe(true); // populates the cache
 
     const ended: string[] = [];
-    ctx.container.services.friends.onRelationshipEnded((x, y) => {
+    const off = ctx.container.events.on('friend.ended', ({ a: x, b: y }) => {
       ended.push([x.toHexString(), y.toHexString()].sort().join(':'));
     });
 
@@ -280,6 +280,7 @@ describe('friendships', () => {
     expect(await cache.areFriends(oid(a), oid(b))).toBe(false);
     expect(await cache.areFriends(oid(b), oid(a))).toBe(false);
     expect(ended).toEqual([[idOf(a), idOf(b)].sort().join(':')]);
+    off();
 
     await as(b).del(`/friends/${idOf(a)}`).expect(404);
   });

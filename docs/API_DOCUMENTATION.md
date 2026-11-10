@@ -1,6 +1,6 @@
 # V-Nav REST API
 
-Status: **Approved design.** Implemented and tested so far: all of §2 Auth; §3 Users except avatar upload and account deletion; all of §4 Friends and §5 Blocks; `/health`, `/ready`. Everything else is design only until its phase lands; [DEVELOPMENT_PROGRESS.md](../DEVELOPMENT_PROGRESS.md) is the source of truth. An OpenAPI 3.1 file generated from the zod validators is planned for Phase 7, when the client consumes the API; this document is authoritative until then.
+Status: **Approved design.** Implemented and tested so far: all of §2 Auth; §3 Users except avatar upload and account deletion; all of §4 Friends, §5 Blocks and §6 Location; `/health`, `/ready`. Everything else is design only until its phase lands; [DEVELOPMENT_PROGRESS.md](../DEVELOPMENT_PROGRESS.md) is the source of truth. An OpenAPI 3.1 file generated from the zod validators is planned for Phase 7, when the client consumes the API; this document is authoritative until then.
 
 Base URL: `/api/v1`. All bodies are JSON unless noted. All timestamps are ISO 8601 UTC.
 
