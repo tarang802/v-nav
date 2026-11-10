@@ -3,6 +3,13 @@
 > Real-time campus navigation and social map for VIT Chennai.  
 > Built with React + Vite (client) and Node.js + Express + Socket.IO (server).
 
+> **Rebuild in progress.** V-Nav is being rebuilt as a production-grade platform (verified student accounts, friend-only live location over Redis-backed Socket.IO, campus events).
+>
+> - **`server/`** is the new TypeScript API. Phase 2 (auth, sessions, infrastructure) is done and tested; friends, location and events follow.
+> - **`server-legacy/`** is the original Express server, kept unchanged so the current client still runs. It is deleted in Phase 7, when the client moves to the new API.
+> - Progress: [DEVELOPMENT_PROGRESS.md](DEVELOPMENT_PROGRESS.md)
+> - Design: [Architecture](docs/ARCHITECTURE.md) · [Database](docs/DATABASE_SCHEMA.md) · [REST API](docs/API_DOCUMENTATION.md) · [Socket events](docs/SOCKET_EVENTS.md) · [Security](docs/SECURITY.md) · [Scalability](docs/SCALABILITY.md) · [Deployment](docs/DEPLOYMENT.md) · [Load testing](docs/LOAD_TESTING.md)
+
 ---
 
 ## Tech Stack
@@ -10,65 +17,56 @@
 | Layer | Tech |
 |---|---|
 | Frontend | React 18, Vite, Mapbox GL JS, Zustand, Framer Motion |
-| Backend | Node.js, Express, Socket.IO |
-| Database | MongoDB (Atlas in production) |
-| Hosting | Vercel (client) + Railway (server) |
+| Backend (new) | Node.js 22+, TypeScript, Express 5, MongoDB (replica set) via Mongoose, Redis via ioredis, zod, pino |
+| Tests | Vitest + Supertest against real MongoDB and Redis |
+| Local infra | Docker Compose: MongoDB 7 (rs0), Redis 7, Mailpit |
 
 ---
 
-## Local Development
+## Local Development (new server)
 
-### Prerequisites
-- Node.js 18+
-- MongoDB running locally (or Atlas URI)
-- Mapbox account (free tier works)
+Prerequisites: Node.js 22+, Docker.
 
-### 1. Clone and install
+1. Start MongoDB (host port 27018), Redis (6380) and Mailpit (inbox at http://localhost:8025):
+   ```bash
+   docker compose up -d mongo redis mailpit
+   ```
+2. Configure the server. Copy the template, then replace the three `replace-with-…` secrets (the server refuses to start with them):
+   ```bash
+   cp server/.env.example server/.env
+   ```
+   ```bash
+   node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+   ```
+3. Install, test, run:
+   ```bash
+   npm --prefix server install
+   ```
+   ```bash
+   npm --prefix server test
+   ```
+   ```bash
+   npm --prefix server run dev
+   ```
+4. Check it: http://localhost:3000/ready should return `{"status":"ready",...}`. Register with an `@vitstudent.ac.in` address via `POST /api/v1/auth/register`; the code arrives in Mailpit.
 
+### Running the current client (legacy server)
+
+The client in `client/` still talks to the old API until Phase 7:
 ```bash
-git clone https://github.com/your-username/v-nav.git
-cd v-nav
-
-# Install client deps
-cd client && npm install
-
-# Install server deps
-cd ../server && npm install
+npm --prefix server-legacy install
 ```
-
-### 2. Configure environment
-
-**Client** — create `client/.env`:
-```
-VITE_MAPBOX_TOKEN=pk.your_mapbox_token
-VITE_API_URL=
-VITE_SOCKET_URL=http://localhost:3000
-```
-> Leave `VITE_API_URL` empty in dev — the Vite proxy routes `/api` to localhost:3000 automatically.
-
-**Server** — create `server/.env`:
-```
-PORT=3000
-MONGO_URI=mongodb://localhost:27017/vnav
-JWT_SECRET=your_long_random_secret
-CLIENT_ORIGIN=http://localhost:5173
-```
-
-### 3. Run
-
 ```bash
-# Terminal 1 — server
-cd server && npm run dev
-
-# Terminal 2 — client
-cd client && npm run dev
+npm --prefix server-legacy run dev
 ```
-
-Open http://localhost:5173
+```bash
+npm --prefix client run dev
+```
+Only one of the two servers can use port 3000 at a time.
 
 ---
 
-## Production Deployment
+## Production Deployment (legacy, superseded by [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) in Phase 9)
 
 ### Architecture
 

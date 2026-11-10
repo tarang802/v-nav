@@ -1,0 +1,65 @@
+# Local development stack. Ports are bound to 127.0.0.1 only; these services
+# have no passwords and must never be exposed beyond this machine.
+#
+#   docker compose up -d mongo redis mailpit      # dependencies only (run API on host)
+#   docker compose --profile api up -d --build    # also run the API in a container
+
+name: vnav
+
+services:
+  mongo:
+    image: mongo:7
+    command: ['--replSet', 'rs0', '--bind_ip_all']
+    # Host port 27018 so it does not collide with a locally installed MongoDB on 27017.
+    ports: ['127.0.0.1:27018:27017']
+    volumes: ['mongo-data:/data/db']
+    # Initiates the single-node replica set on first boot (transactions need it).
+    # The member is advertised as "mongo:27017"; host processes connect with directConnection=true.
+    healthcheck:
+      test:
+        - CMD
+        - mongosh
+        - --quiet
+        - --eval
+        - "try { rs.status().ok } catch (e) { rs.initiate({ _id: 'rs0', members: [{ _id: 0, host: 'mongo:27017' }] }).ok }"
+      interval: 5s
+      timeout: 10s
+      retries: 20
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    command: ['redis-server', '--appendonly', 'no', '--save', '']
+    # Host port 6380 so it does not collide with another local Redis on 6379.
+    ports: ['127.0.0.1:6380:6379']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  mailpit:
+    image: axllent/mailpit:v1.21
+    ports:
+      - '127.0.0.1:1025:1025' # SMTP
+      - '127.0.0.1:8025:8025' # web inbox: http://localhost:8025
+
+  api:
+    profiles: ['api']
+    build: ./server
+    env_file: ./server/.env
+    environment:
+      NODE_ENV: development
+      MONGO_URI: mongodb://mongo:27017/vnav?replicaSet=rs0
+      REDIS_URL: redis://redis:6379/0
+      SMTP_HOST: mailpit
+      SMTP_PORT: '1025'
+      LOG_LEVEL: info
+    ports: ['127.0.0.1:3000:3000']
+    depends_on:
+      mongo: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      mailpit: { condition: service_started }
+
+volumes:
+  mongo-data:

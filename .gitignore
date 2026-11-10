@@ -10,6 +10,8 @@ node_modules/
 
 # ── Build outputs ──────────────────────────────────────────────
 client/dist/
+server/dist/
+server/coverage/
 
 # ── Logs ───────────────────────────────────────────────────────
 *.log
