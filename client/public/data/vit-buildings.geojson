@@ -1,0 +1,230 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "id": 1,
+      "type": "Feature",
+      "properties": {
+        "name": "Academic Block 1",
+        "shortName": "AB1",
+        "type": "academic",
+        "departments": "Computer Science · Info Technology · Electronics",
+        "description": "Primary academic block hosting CS, IT and ECE schools"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1493, 12.8455],[80.1503, 12.8455],[80.1503, 12.8465],[80.1493, 12.8465],[80.1493, 12.8455]]]
+      }
+    },
+    {
+      "id": 2,
+      "type": "Feature",
+      "properties": {
+        "name": "Academic Block 2",
+        "shortName": "AB2",
+        "type": "academic",
+        "departments": "Mechanical · Civil · Chemical Engineering",
+        "description": "Houses engineering schools and research labs"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1547, 12.8457],[80.1558, 12.8457],[80.1558, 12.8467],[80.1547, 12.8467],[80.1547, 12.8457]]]
+      }
+    },
+    {
+      "id": 3,
+      "type": "Feature",
+      "properties": {
+        "name": "Academic Block 3",
+        "shortName": "AB3",
+        "type": "academic",
+        "departments": "Physics · Chemistry · Mathematics",
+        "description": "Science departments and undergraduate labs"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1521, 12.8444],[80.1529, 12.8444],[80.1529, 12.8452],[80.1521, 12.8452],[80.1521, 12.8444]]]
+      }
+    },
+    {
+      "id": 4,
+      "type": "Feature",
+      "properties": {
+        "name": "Technology Tower",
+        "shortName": "TT",
+        "type": "academic",
+        "departments": "Management · MBA · Executive Programs",
+        "description": "Tallest building on campus — MBA and management programs"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1525, 12.8432],[80.1531, 12.8432],[80.1531, 12.8438],[80.1525, 12.8438],[80.1525, 12.8432]]]
+      }
+    },
+    {
+      "id": 5,
+      "type": "Feature",
+      "properties": {
+        "name": "Knowledge Resource Centre",
+        "shortName": "Library",
+        "type": "facility",
+        "departments": "Central Library · Digital Resources · Reading Halls",
+        "description": "Central campus library with 24×7 reading facilities"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1563, 12.8419],[80.1572, 12.8419],[80.1572, 12.8427],[80.1563, 12.8427],[80.1563, 12.8419]]]
+      }
+    },
+    {
+      "id": 6,
+      "type": "Feature",
+      "properties": {
+        "name": "Admin Block",
+        "shortName": "Admin",
+        "type": "admin",
+        "departments": "Registrar · Finance · Placement Cell",
+        "description": "Administrative offices, registrar, and placement division"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1530, 12.8409],[80.1537, 12.8409],[80.1537, 12.8415],[80.1530, 12.8415],[80.1530, 12.8409]]]
+      }
+    },
+    {
+      "id": 7,
+      "type": "Feature",
+      "properties": {
+        "name": "Student Activity Centre",
+        "shortName": "SAC",
+        "type": "facility",
+        "departments": "Student Clubs · Events · Cultural Activities",
+        "description": "Hub for student organizations and cultural programs"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1508, 12.8425],[80.1515, 12.8425],[80.1515, 12.8431],[80.1508, 12.8431],[80.1508, 12.8425]]]
+      }
+    },
+    {
+      "id": 8,
+      "type": "Feature",
+      "properties": {
+        "name": "Food Court",
+        "shortName": "Food Ct.",
+        "type": "facility",
+        "departments": "Dining · Canteen · Cafeteria",
+        "description": "Central campus dining facility"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1537, 12.8395],[80.1544, 12.8395],[80.1544, 12.8400],[80.1537, 12.8400],[80.1537, 12.8395]]]
+      }
+    },
+    {
+      "id": 9,
+      "type": "Feature",
+      "properties": {
+        "name": "Medical Centre",
+        "shortName": "Medical",
+        "type": "facility",
+        "departments": "Health Services · First Aid · Counselling",
+        "description": "24×7 campus health and wellness centre"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1505, 12.8383],[80.1509, 12.8383],[80.1509, 12.8387],[80.1505, 12.8387],[80.1505, 12.8383]]]
+      }
+    },
+    {
+      "id": 10,
+      "type": "Feature",
+      "properties": {
+        "name": "Hostel Block A",
+        "shortName": "Hostel A",
+        "type": "hostel",
+        "departments": "Student Residence · Boys Hostel",
+        "description": "Residential block for male students"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1600, 12.8446],[80.1607, 12.8446],[80.1607, 12.8454],[80.1600, 12.8454],[80.1600, 12.8446]]]
+      }
+    },
+    {
+      "id": 11,
+      "type": "Feature",
+      "properties": {
+        "name": "Hostel Block B",
+        "shortName": "Hostel B",
+        "type": "hostel",
+        "departments": "Student Residence · Boys Hostel",
+        "description": "Residential block for male students"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1600, 12.8433],[80.1607, 12.8433],[80.1607, 12.8441],[80.1600, 12.8441],[80.1600, 12.8433]]]
+      }
+    },
+    {
+      "id": 12,
+      "type": "Feature",
+      "properties": {
+        "name": "Hostel Block C",
+        "shortName": "Hostel C",
+        "type": "hostel",
+        "departments": "Student Residence · Girls Hostel",
+        "description": "Residential block for female students"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1600, 12.8420],[80.1607, 12.8420],[80.1607, 12.8428],[80.1600, 12.8428],[80.1600, 12.8420]]]
+      }
+    },
+    {
+      "id": 13,
+      "type": "Feature",
+      "properties": {
+        "name": "Sports Complex",
+        "shortName": "Sports",
+        "type": "sports",
+        "departments": "Tennis · Basketball · Badminton · Gym",
+        "description": "Indoor and outdoor sports facilities"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1548, 12.8371],[80.1563, 12.8371],[80.1563, 12.8385],[80.1548, 12.8385],[80.1548, 12.8371]]]
+      }
+    },
+    {
+      "id": 14,
+      "type": "Feature",
+      "properties": {
+        "name": "Innovation Centre",
+        "shortName": "Innov.",
+        "type": "academic",
+        "departments": "Research Labs · Incubation · Startups",
+        "description": "Technology incubation and startup ecosystem hub"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1524, 12.8469],[80.1532, 12.8469],[80.1532, 12.8475],[80.1524, 12.8475],[80.1524, 12.8469]]]
+      }
+    },
+    {
+      "id": 15,
+      "type": "Feature",
+      "properties": {
+        "name": "MG House",
+        "shortName": "MG",
+        "type": "admin",
+        "departments": "Guest House · VIP Accommodation",
+        "description": "Campus guest house near main gate"
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[80.1496, 12.8386],[80.1501, 12.8386],[80.1501, 12.8390],[80.1496, 12.8390],[80.1496, 12.8386]]]
+      }
+    }
+  ]
+}
