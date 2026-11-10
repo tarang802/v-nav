@@ -1,6 +1,6 @@
 # V-Nav Development Progress
 
-Last updated: 2026-11-10 (Phase 2)
+Last updated: 2026-11-11 (Phase 3)
 
 A module counts as **complete** only when its code exists, its tests have been run and pass, and the result is recorded below. Generated code alone counts as "in progress".
 
@@ -14,7 +14,7 @@ A module counts as **complete** only when its code exists, its tests have been r
 | 0.5 — Setup | Git baseline; remove dead/fabricated code | 🟡 Git baseline pushed (`cc7dfc8`); dead-file cleanup pending |
 | 1 — Architecture | Architecture, schema, API, sockets, security, scalability, deployment, load-test plan | ✅ Approved 2026-11-10 with defaults Q1–Q5 |
 | 2 — Backend foundation | TS server skeleton, config, logging, errors, validation, MongoDB + Redis, health/ready, graceful shutdown, auth + email OTP + sessions, Docker Compose | ✅ Done — 53 tests passing (see below) |
-| 3 — Friend system | Friend codes, requests, friendships, blocks, lists | ⬜ |
+| 3 — Friend system | Friend codes, requests, friendships, blocks, lists | ✅ Done — 82 tests passing (see below) |
 | 4 — Real-time location | Socket auth, Redis adapter, sharing state, friend-only delivery, revocation, presence, reconnection | ⬜ |
 | 5 — Map | Persistent map shell, verified buildings layer, friend and event layers, clustering | ⬜ |
 | 6 — Events | CRUD, visibility, discovery, filters, pagination, map integration, images | ⬜ |
@@ -39,10 +39,18 @@ A module counts as **complete** only when its code exists, its tests have been r
   - Security audit log (`audit_logs`, 180-day TTL).
   - `StudentVerifier` interface with `EmailOtpVerifier`; `MailTransport` interface with SMTP implementation (Mailpit locally).
   - Docker Compose (mongo rs0, redis, mailpit, optional api); multi-stage non-root `server/Dockerfile` with tini; `npm run db:indexes` release script.
+- **Phase 3 friend system**:
+  - Collections `friend_requests` (one pending request per pair in either direction via a unique `pairKey`), `friendships` (two edges per friendship), `blocks`.
+  - Every multi-document change (accept, crossing-request auto-accept, unfriend, block) runs in one MongoDB transaction (snapshot read, majority write) with automatic retry on write conflicts. `friendCount` changes only inside those transactions, through a conditional increment that enforces the 1,000-friend cap and that both accounts are active.
+  - Friend-code lookup (`GET /users/lookup`; accepts `a82kd`, `vnav-a82kd`, and reads I/L/O as 1/1/0), profile view (`GET /users/:id`: public view for strangers, friend view for friends, own view for self), `PATCH /users/me`, `PATCH /users/me/privacy`.
+  - Requests: send, incoming/outgoing lists, accept (recipient only), reject (recipient only), cancel (sender only); crossing requests accept automatically; cap of 50 pending outgoing; `allowFriendRequests` respected; 30/h send and 60/h lookup limits per user.
+  - Friend list with cursor pagination; unfriend.
+  - Blocks: remove the friendship and pending requests both ways in one transaction; blocked and unknown users get an identical 404 everywhere; block/unblock are idempotent; unblock does not restore the friendship; both are audit-logged.
+  - Redis relationship cache (`friends:{id}`, `blocks:{id}`, 10 min) with a generation guard so a slow reader cannot write a stale list back after an unfriend or block; falls back to MongoDB on a miss or a Redis error. `FriendService.onRelationshipEnded` hook for Phase 4 location revocation.
 - The pre-rebuild server moved to `server-legacy/` (unchanged, still runnable) so the current client keeps working until Phase 7, when it is deleted.
 
 ## Pending modules
-Phases 3–9. Phase 0.5 dead-file cleanup is folded into Phase 7.
+Phases 4–9. Phase 0.5 dead-file cleanup is folded into Phase 7.
 
 ## Phase 2 deviations from the Phase 1 docs (docs updated)
 | Change | Why |
@@ -55,6 +63,16 @@ Phases 3–9. Phase 0.5 dead-file cleanup is folded into Phase 7.
 | Upgraded to zod 4, nodemailer 10, vitest 5, Express 5, bcryptjs 3 | `npm audit` reported high/critical advisories in the older majors; now 0 vulnerabilities. |
 | OpenAPI file deferred to Phase 7 | Not needed until the client consumes the API; API_DOCUMENTATION.md stays authoritative. |
 | Metrics (`/metrics`, prom-client) and OpenTelemetry deferred to Phase 9 | Monitoring belongs with deployment; logging with request ids is in place now. |
+
+## Phase 3 deviations from the Phase 1 docs (docs updated)
+| Change | Why |
+|---|---|
+| `friend_requests` unique index on `pairKey` (sorted pair) instead of `{ from, to }` | Two students requesting each other at the same instant could otherwise create two crossing requests. With one request per pair, the second insert fails and the retry accepts the first request. Tested with concurrent requests. |
+| Pagination indexes include `_id` (e.g. `{ userId, since: -1, _id: -1 }`) | Stable cursors when two rows share a timestamp. |
+| Auto-accept on `POST /friends/requests` returns `200 { friend, autoAccepted: true }` | Same `FriendUser` shape as accept, so the client handles both the same way. |
+| New error `403 FRIEND_REQUESTS_DISABLED` | Distinguishes "this student turned off requests" from "not found". |
+| `GET /users/lookup` also returns `acceptsRequests` | Lets the UI disable the Add button instead of failing after a tap. |
+| `FriendUser.online` not returned yet | Presence is built in Phase 4; returning `false` now would be fake data. `lastSeenAt` is returned, respecting `showOnlineStatus`. |
 
 ## Not yet implemented (deliberately)
 | Feature | Reason |
@@ -100,10 +118,12 @@ Full reasoning in [docs/ARCHITECTURE.md §3](docs/ARCHITECTURE.md). Summary:
 | Q4 | Existing MongoDB data | Test data; the new server uses a fresh `vnav` database on the Compose Mongo |
 | Q5 | TypeScript scope | Server only |
 
-## Known gaps in Phase 2 (not yet tested or built)
+## Known gaps (not yet tested or built)
 - Behaviour when Redis goes down mid-request is designed to fail closed (503) but has **no automated test** yet; planned for Phase 8 with a fault-injection test.
 - Sockets are not disconnected on session revocation yet (`SessionService.onRevoked` hook exists; wired in Phase 4).
 - Suspension / roles have no admin endpoints yet (`requireRole` exists, unused).
+- Relationship-cache invalidation runs after the database commit. If that Redis call fails, the stale entry can survive until its 10-minute TTL; the failure is logged at error level. Phase 4 must decide whether location delivery accepts that window or re-checks MongoDB for revocations.
+- Avatars (`PUT /users/me/avatar`) and account deletion (`DELETE /users/me`) are not built yet; they need the upload pipeline (Phase 6) and a full cascade (Phase 8).
 
 ## Tests executed
 | Date | What | Result |
@@ -114,5 +134,9 @@ Full reasoning in [docs/ARCHITECTURE.md §3](docs/ARCHITECTURE.md). Summary:
 | 2026-11-10 | `server: npm audit` | ✅ 0 vulnerabilities |
 | 2026-11-10 | Manual: dev server boot, register → OTP delivered to Mailpit over real SMTP → verify → refresh with cookie | ✅ |
 | 2026-11-10 | Manual: production image via `docker compose --profile api`, `/ready` 200, `docker stop` → graceful shutdown logs, exit code 0 | ✅ |
+
+| 2026-11-11 | `server: npm test`: 26 unit, 56 integration (29 new for Phase 3, including concurrent crossing requests ×5 rounds, 5 concurrent duplicate sends, and transaction rollback at the friend cap) | ✅ 82/82 passed, 3 consecutive runs |
+| 2026-11-11 | `server: tsc --noEmit`, `npm run build`, `npm audit --omit=dev` | ✅ 0 vulnerabilities |
+| 2026-11-11 | `npm run db:indexes` against the dev database; indexes on `friend_requests`, `friendships`, `blocks` checked in mongosh | ✅ |
 
 Load tests: none run yet (Phase 8).

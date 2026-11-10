@@ -5,6 +5,7 @@ import type { Logger } from './observability/logger.js';
 import { registerModels, type Models } from './models/index.js';
 import { UserRepository } from './repositories/userRepository.js';
 import { SessionRepository } from './repositories/sessionRepository.js';
+import { SocialRepository } from './repositories/socialRepository.js';
 import { PasswordResetRepository, VerificationCodeRepository } from './repositories/tokenRepositories.js';
 import { AuditService } from './services/auditService.js';
 import { AuthService } from './services/authService.js';
@@ -15,6 +16,8 @@ import { RateLimiter } from './services/rateLimiter.js';
 import { SessionService } from './services/sessionService.js';
 import { TokenService } from './services/tokenService.js';
 import { EmailOtpVerifier } from './services/verificationService.js';
+import { FriendService } from './services/friendService.js';
+import { RelationshipCache } from './services/relationshipCache.js';
 
 /** Runtime state shared by health checks and graceful shutdown. */
 export interface Lifecycle {
@@ -28,12 +31,14 @@ export interface Container {
   redis: Redis;
   models: Models;
   lifecycle: Lifecycle;
-  repos: { users: UserRepository };
+  repos: { users: UserRepository; social: SocialRepository };
   services: {
     tokens: TokenService;
     sessions: SessionService;
     limiter: RateLimiter;
     auth: AuthService;
+    relationships: RelationshipCache;
+    friends: FriendService;
   };
 }
 
@@ -55,6 +60,7 @@ export function buildContainer(
   const sessionsRepo = new SessionRepository(models);
   const codes = new VerificationCodeRepository(models);
   const resets = new PasswordResetRepository(models);
+  const social = new SocialRepository(models);
 
   const tokens = new TokenService(config.secrets.jwtAccess);
   const sessions = new SessionService(sessionsRepo, tokens, redis, config.secrets.ipHash);
@@ -78,6 +84,9 @@ export function buildContainer(
     allowedEmailDomains: config.allowedEmailDomains,
   });
 
+  const relationships = new RelationshipCache(redis, social, logger);
+  const friends = new FriendService({ mongo, users, social, cache: relationships, limiter, audit, logger });
+
   return {
     config,
     logger,
@@ -85,7 +94,7 @@ export function buildContainer(
     redis,
     models,
     lifecycle: { shuttingDown: false },
-    repos: { users },
-    services: { tokens, sessions, limiter, auth },
+    repos: { users, social },
+    services: { tokens, sessions, limiter, auth, relationships, friends },
   };
 }

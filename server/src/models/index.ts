@@ -4,6 +4,9 @@ import { sessionSchema, type Session } from './Session.js';
 import { verificationCodeSchema, type VerificationCode } from './VerificationCode.js';
 import { passwordResetTokenSchema, type PasswordResetToken } from './PasswordResetToken.js';
 import { auditLogSchema, type AuditLog } from './AuditLog.js';
+import { friendRequestSchema, type FriendRequest } from './FriendRequest.js';
+import { friendshipSchema, type Friendship } from './Friendship.js';
+import { blockSchema, type Block } from './Block.js';
 
 export interface Models {
   User: Model<User>;
@@ -11,6 +14,9 @@ export interface Models {
   VerificationCode: Model<VerificationCode>;
   PasswordResetToken: Model<PasswordResetToken>;
   AuditLog: Model<AuditLog>;
+  FriendRequest: Model<FriendRequest>;
+  Friendship: Model<Friendship>;
+  Block: Model<Block>;
 }
 
 /** Registers every model on the given connection. No global mongoose models are used. */
@@ -21,6 +27,9 @@ export function registerModels(conn: Connection): Models {
     VerificationCode: conn.model<VerificationCode>('VerificationCode', verificationCodeSchema),
     PasswordResetToken: conn.model<PasswordResetToken>('PasswordResetToken', passwordResetTokenSchema),
     AuditLog: conn.model<AuditLog>('AuditLog', auditLogSchema),
+    FriendRequest: conn.model<FriendRequest>('FriendRequest', friendRequestSchema),
+    Friendship: conn.model<Friendship>('Friendship', friendshipSchema),
+    Block: conn.model<Block>('Block', blockSchema),
   };
 }
 

@@ -100,15 +100,16 @@ Only **pending** requests are stored. Accept, reject and cancel delete the docum
 |---|---|
 | `from` | ObjectId |
 | `to` | ObjectId |
+| `pairKey` | string: the two user ids sorted and joined with `:` |
 | `createdAt` | Date |
 
 Indexes:
 
 | Index | Serves |
 |---|---|
-| `{ from: 1, to: 1 }` unique | Prevents duplicate requests (race-safe at the DB level, not just a pre-check) |
-| `{ to: 1, createdAt: -1 }` | Incoming requests inbox, paginated |
-| `{ from: 1, createdAt: -1 }` | Outgoing requests, paginated |
+| `{ pairKey: 1 }` unique | At most **one pending request per pair, in either direction**. Prevents duplicates and crossing requests at the database level, even when both students tap "Add" at the same instant (the second insert fails; the retry finds the first request and accepts it). |
+| `{ to: 1, createdAt: -1, _id: -1 }` | Incoming requests inbox, paginated (`_id` breaks timestamp ties) |
+| `{ from: 1, createdAt: -1, _id: -1 }` | Outgoing requests, paginated |
 
 Rules enforced in `FriendService.sendRequest` (inside a transaction):
 1. Target exists, is `active`, and `privacy.allowFriendRequests` is true.
@@ -128,7 +129,7 @@ Each friendship is **two edge documents**, created and deleted together in one t
 | `friendId` | ObjectId |
 | `since` | Date |
 
-Indexes: `{ userId: 1, friendId: 1 }` unique (duplicate prevention, "are A and B friends?" point lookup) · `{ userId: 1, since: -1 }` (friend list, cursor pagination).
+Indexes: `{ userId: 1, friendId: 1 }` unique (duplicate prevention, "are A and B friends?" point lookup) · `{ userId: 1, since: -1, _id: -1 }` (friend list, cursor pagination).
 
 **Why two edges instead of one `{a, b}` pair document:** listing a user's friends becomes one equality query on an index prefix, sorted and paginated, instead of an `$or` across two fields that cannot share one sort. The cost is 2× storage on a small collection (2,000 users × ~50 friends × 2 ≈ 200 k tiny docs) — negligible.
 
@@ -142,7 +143,7 @@ Hard cap: 1,000 friends per user. Keeps the Redis friend set and event-visibilit
 | `blocked` | ObjectId |
 | `createdAt` | Date |
 
-Indexes: `{ blocker: 1, blocked: 1 }` unique · `{ blocked: 1 }` (check "has anyone I'm interacting with blocked me").
+Indexes: `{ blocker: 1, blocked: 1 }` unique · `{ blocker: 1, createdAt: -1, _id: -1 }` (my block list) · `{ blocked: 1 }` (check "has anyone I'm interacting with blocked me").
 
 Blocking, in one transaction: insert block → delete both friendship edges (decrement both `friendCount`s) → delete pending requests in both directions. After commit: invalidate both friend-set caches and emit location/presence removal to both users.
 
@@ -209,6 +210,7 @@ Redis is ephemeral. Losing it must never corrupt data; at worst users appear off
 | `presence:{userId}` | hash `socketId → instanceId` | 90 s, refreshed by heartbeat every 30 s | Online if key exists; multi-tab aware; self-heals if an instance crashes |
 | `friends:{userId}` | set of friend IDs | 10 min | Delivery-time authorisation cache. **Deleted synchronously** after any friendship/block commit |
 | `blocks:{userId}` | set of IDs blocked either way | 10 min | Event visibility and lookup filtering; deleted on block/unblock |
+| `friends:gen:{userId}`, `blocks:gen:{userId}` | counter | 24 h | Bumped on every invalidation. A reader writes a freshly loaded set back only if the counter is unchanged (checked in Lua), so a read that started before an unfriend commits cannot re-cache the old list. Empty lists are cached as the marker member `_`. |
 | `session:revoked:{sessionId}` | string | 15 min (access token lifetime) | Rejects still-valid access tokens of revoked sessions |
 | `rl:{scope}:{key}` | counters | per limit window | HTTP rate limiting (`rate-limit-redis` store) |
 | `login:fail:{email}` | counter | 15 min | Progressive account lockout |

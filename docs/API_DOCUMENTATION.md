@@ -1,6 +1,6 @@
 # V-Nav REST API
 
-Status: **Approved design.** Implemented and tested so far (Phase 2): all of §2 Auth, `GET /users/me`, `/health`, `/ready`. Everything else is design only until its phase lands; [DEVELOPMENT_PROGRESS.md](../DEVELOPMENT_PROGRESS.md) is the source of truth. An OpenAPI 3.1 file generated from the zod validators is planned for Phase 7, when the client consumes the API; this document is authoritative until then.
+Status: **Approved design.** Implemented and tested so far: all of §2 Auth; §3 Users except avatar upload and account deletion; all of §4 Friends and §5 Blocks; `/health`, `/ready`. Everything else is design only until its phase lands; [DEVELOPMENT_PROGRESS.md](../DEVELOPMENT_PROGRESS.md) is the source of truth. An OpenAPI 3.1 file generated from the zod validators is planned for Phase 7, when the client consumes the API; this document is authoritative until then.
 
 Base URL: `/api/v1`. All bodies are JSON unless noted. All timestamps are ISO 8601 UTC.
 
@@ -25,7 +25,7 @@ Live location is **not** available over REST. It is delivered only over authenti
 |---|---|
 | 400 | `VALIDATION_ERROR`, `WEAK_PASSWORD`, `INVALID_CODE` (wrong/expired/locked OTP, or unknown email), `INVALID_TOKEN` (reset link) |
 | 401 | `UNAUTHENTICATED`, `TOKEN_EXPIRED`, `SESSION_REVOKED`, `INVALID_CREDENTIALS`, `REFRESH_CONFLICT` (concurrent refresh; retry once) |
-| 403 | `FORBIDDEN`, `CSRF_REJECTED`, `EMAIL_NOT_VERIFIED`, `ACCOUNT_SUSPENDED`, `EMAIL_DOMAIN_NOT_ALLOWED` |
+| 403 | `FORBIDDEN`, `CSRF_REJECTED`, `EMAIL_NOT_VERIFIED`, `ACCOUNT_SUSPENDED`, `EMAIL_DOMAIN_NOT_ALLOWED`, `FRIEND_REQUESTS_DISABLED` |
 | 404 | `NOT_FOUND` (also used where revealing existence would leak information) |
 | 409 | `EMAIL_TAKEN`, `REG_NO_TAKEN`, `ALREADY_FRIENDS`, `FRIEND_REQUEST_EXISTS`, `FRIEND_LIMIT_REACHED` |
 | 413 | `PAYLOAD_TOO_LARGE` |
@@ -42,7 +42,7 @@ Returned when the viewer is **not** a friend:
 ```json
 { "id": "…", "name": "Asha R", "avatarUrl": "…", "friendCode": "VNAV-A82KD", "isVerified": true }
 ```
-`FriendUser` (viewer is a friend) adds `regNo`, `friendCount`, `friendsSince`, and — only if the friend allows it — `online` and `lastSeenAt`. Email is never shown to anyone but the owner.
+`FriendUser` (viewer is a friend) adds `regNo`, `friendCount`, `friendsSince`, and — only if the friend allows it (`showOnlineStatus`) — `lastSeenAt` and, from Phase 4, `online`. Email is never shown to anyone but the owner.
 
 ---
 
@@ -75,8 +75,8 @@ Returned when the viewer is **not** a friend:
 | `PUT /users/me/avatar` | 🔒 | `multipart/form-data` field `image` | `200 { avatarUrl }` | JPEG/PNG/WebP ≤ 5 MB, verified by magic bytes, re-encoded to 512 px WebP, EXIF stripped |
 | `DELETE /users/me/avatar` | 🔒 | — | `204` | |
 | `DELETE /users/me` | 🔒 | `{ password }` | `204` | Full account deletion (see schema §4) |
-| `GET /users/lookup` | 🔒 | `?code=VNAV-A82KD` | `200 { user: PublicUser, relationship }` | `relationship`: `none` \| `friends` \| `request_sent` \| `request_received`. Blocked either way, unverified, or unknown → identical `404`. 60/h per user. |
-| `GET /users/:id` | 🔒 | — | `200 { user: PublicUser \| FriendUser }` | `404` if blocked either way |
+| `GET /users/lookup` | 🔒 | `?code=VNAV-A82KD` | `200 { user: PublicUser, relationship, acceptsRequests }` | Code is case-insensitive, `VNAV-` prefix optional, I/L/O read as 1/1/0. `relationship`: `self` \| `none` \| `friends` \| `request_sent` \| `request_received`. Blocked either way, unverified, or unknown → identical `404`. 60/h per user. |
+| `GET /users/:id` | 🔒 | — | `200 { user: PublicUser \| FriendUser \| SelfUser, relationship }` | `404` if unknown, inactive or blocked either way |
 
 ---
 
@@ -85,10 +85,10 @@ Returned when the viewer is **not** a friend:
 | Method & path | Auth | Body / query | Success | Notes |
 |---|---|---|---|---|
 | `GET /friends` | 🔒 | `?limit&cursor` | `200 { items: FriendUser[], nextCursor }` | Sorted by `since` desc |
-| `DELETE /friends/:userId` | 🔒 | — | `204` | Removes both edges; stops location delivery both ways immediately |
+| `DELETE /friends/:userId` | 🔒 | — | `204` | Removes both edges; stops location delivery both ways immediately. `404` if not friends. |
 | `GET /friends/requests/incoming` | 🔒 | `?limit&cursor` | `200 { items: [{ id, from: PublicUser, createdAt }] }` | |
 | `GET /friends/requests/outgoing` | 🔒 | `?limit&cursor` | `200 { items: [{ id, to: PublicUser, createdAt }] }` | |
-| `POST /friends/requests` | 🔒 | `{ friendCode }` | `201 { request }` or `200 { friendship }` if it auto-accepted a crossing request | 30/h per user. Rules in schema §2.5. |
+| `POST /friends/requests` | 🔒 | `{ friendCode }` | `201 { request: { id, to: PublicUser, createdAt } }`, or `200 { friend: FriendUser, autoAccepted: true }` if the other student had already sent one | 30/h per user. Rules in schema §2.5. Errors: `404` unknown or blocked, `400` own code, `403 FRIEND_REQUESTS_DISABLED`, `409 ALREADY_FRIENDS` / `FRIEND_REQUEST_EXISTS` / `FRIEND_LIMIT_REACHED` (50 pending outgoing, or 1,000 friends). |
 | `POST /friends/requests/:id/accept` | 🔒 | — | `200 { friend: FriendUser }` | Recipient only, else `404`. Transaction. |
 | `POST /friends/requests/:id/reject` | 🔒 | — | `204` | Recipient only. Sender is not notified. |
 | `DELETE /friends/requests/:id` | 🔒 | — | `204` | Cancel; sender only. |
@@ -98,8 +98,8 @@ Returned when the viewer is **not** a friend:
 | Method & path | Auth | Body | Success | Notes |
 |---|---|---|---|---|
 | `GET /blocks` | 🔒 | `?limit&cursor` | `200 { items: [{ user: PublicUser, createdAt }] }` | |
-| `POST /blocks` | 🔒 | `{ userId }` | `201` | Removes friendship and requests both ways, revokes location access |
-| `DELETE /blocks/:userId` | 🔒 | — | `204` | Does not restore the friendship |
+| `POST /blocks` | 🔒 | `{ userId }` | `201` | Removes friendship and requests both ways, revokes location access. Idempotent. `400` for yourself, `404` unknown user. |
+| `DELETE /blocks/:userId` | 🔒 | — | `204` | Does not restore the friendship. Idempotent. |
 
 ---
 

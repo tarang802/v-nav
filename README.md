@@ -5,7 +5,7 @@
 
 > **Rebuild in progress.** V-Nav is being rebuilt as a production-grade platform (verified student accounts, friend-only live location over Redis-backed Socket.IO, campus events).
 >
-> - **`server/`** is the new TypeScript API. Phase 2 (auth, sessions, infrastructure) is done and tested; friends, location and events follow.
+> - **`server/`** is the new TypeScript API. Phases 2–3 (auth, sessions, infrastructure, friends and blocks) are done and tested; real-time location, map and events follow.
 > - **`server-legacy/`** is the original Express server, kept unchanged so the current client still runs. It is deleted in Phase 7, when the client moves to the new API.
 > - Progress: [DEVELOPMENT_PROGRESS.md](DEVELOPMENT_PROGRESS.md)
 > - Design: [Architecture](docs/ARCHITECTURE.md) · [Database](docs/DATABASE_SCHEMA.md) · [REST API](docs/API_DOCUMENTATION.md) · [Socket events](docs/SOCKET_EVENTS.md) · [Security](docs/SECURITY.md) · [Scalability](docs/SCALABILITY.md) · [Deployment](docs/DEPLOYMENT.md) · [Load testing](docs/LOAD_TESTING.md)

@@ -12,6 +12,7 @@ import type { UserRepository } from '../repositories/userRepository.js';
 import type { PasswordResetRepository } from '../repositories/tokenRepositories.js';
 import { AppError } from '../utils/AppError.js';
 import { randomFromAlphabet, randomToken, sha256 } from '../utils/crypto.js';
+import { isDuplicateKey } from '../utils/mongo.js';
 import type { AuditService } from './auditService.js';
 import type { LoginThrottle } from './loginThrottle.js';
 import type { MailService } from './mailService.js';
@@ -41,11 +42,6 @@ export interface AuthResult {
   accessTokenExpiresAt: Date;
   refreshToken: string;
 }
-
-const isDuplicateKey = (err: unknown, field?: string): boolean => {
-  const e = err as { code?: number; keyPattern?: Record<string, unknown> };
-  return e?.code === 11000 && (!field || Boolean(e.keyPattern && field in e.keyPattern));
-};
 
 const emailKey = (email: string) => sha256(email);
 
