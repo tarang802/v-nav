@@ -1,41 +1,29 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# ── Dependencies ──────────────────────────────────────────────
+node_modules/
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
+# ── Local environment files (never commit secrets) ─────────────
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# testing
-/coverage
+# ── Build outputs ──────────────────────────────────────────────
+client/dist/
 
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
-.DS_Store
-*.pem
-
-# debug
+# ── Logs ───────────────────────────────────────────────────────
+*.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# ── OS / Editor ────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+.vscode/
+*.local
 
-# vercel
-.vercel
+# ── Personal notes, not part of the app ────────────────────────
+resume-evidence.md
 
-# typescript
-*.tsbuildinfo
-next-env.d.ts
+# ── Legacy vanilla-JS build (hardcoded Mapbox token); kept locally, deleted in cleanup ──
+client/app.js
+client/styles.css
