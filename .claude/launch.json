@@ -4,8 +4,33 @@
     {
       "name": "beat-agent",
       "runtimeExecutable": "C:\\Users\\Gupt Ah\\Desktop\\beat-agent\\.venv\\Scripts\\python.exe",
-      "runtimeArgs": ["C:\\Users\\Gupt Ah\\Desktop\\beat-agent\\run.py", "app"],
+      "runtimeArgs": [
+        "C:\\Users\\Gupt Ah\\Desktop\\beat-agent\\run.py",
+        "app"
+      ],
       "port": 8000
+    },
+    {
+      "name": "vnav-api",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "server",
+        "run",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "vnav-client",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "--prefix",
+        "client",
+        "run",
+        "dev:next"
+      ],
+      "port": 5173
     }
   ]
 }

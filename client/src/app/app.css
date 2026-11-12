@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family: Inter, system-ui, sans-serif;
+  color: #0f172a;
+  background: #f1f5f9;
+}
+
+/* Keyboard focus is always visible. */
+:focus-visible {
+  outline: 2px solid #4361f8;
+  outline-offset: 2px;
+}
+
+/* ── Map popups (content is built with textContent, see popupContent.js) ── */
+.vnav-popup-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: #0f172a;
+}
+.vnav-popup-line {
+  font-size: 12px;
+  color: #475569;
+  margin-top: 2px;
+}
+.mapboxgl-popup-content {
+  border-radius: 12px;
+  padding: 10px 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
+}
+
+/* ── Your own position ── */
+.vnav-self-marker {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #10b981;
+  border: 3px solid #ffffff;
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5);
+  animation: vnav-self-pulse 2s ease-out infinite;
+}
+@keyframes vnav-self-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+  100% { box-shadow: 0 0 0 16px rgba(16, 185, 129, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .vnav-self-marker { animation: none; }
+}
