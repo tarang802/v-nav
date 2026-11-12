@@ -138,6 +138,7 @@ Placeholders only; real values live in the host's secret manager.
 | `VITE_API_URL` | `https://api.vnav.example` |
 | `VITE_SOCKET_URL` | `https://api.vnav.example` |
 | `VITE_MAPBOX_TOKEN` | URL-restricted `pk.` token |
+| `VITE_APP_SHELL` | `next` selects the rebuilt app. Set by `client/.env.next` (Vite mode `next`: `npm run dev:next`, `npm run build:next`). Removed in Phase 7, when the rebuilt app becomes the only one. |
 
 ---
 

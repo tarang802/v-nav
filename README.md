@@ -5,7 +5,8 @@
 
 > **Rebuild in progress.** V-Nav is being rebuilt as a production-grade platform (verified student accounts, friend-only live location over Redis-backed Socket.IO, campus events).
 >
-> - **`server/`** is the new TypeScript API. Phases 2–4 (auth, sessions, infrastructure, friends and blocks, real-time location over Socket.IO) are done and tested; map, events and the new frontend follow.
+> - **`server/`** is the new TypeScript API. Phases 2–4 (auth, sessions, infrastructure, friends and blocks, real-time location over Socket.IO) are done and tested.
+> - **`client/`** holds two apps until Phase 7: the original one (`npm run dev`, uses `server-legacy/`) and the rebuilt map shell from Phase 5 (`npm run dev:next`, uses `server/`). Events and the remaining screens follow.
 > - **`server-legacy/`** is the original Express server, kept unchanged so the current client still runs. It is deleted in Phase 7, when the client moves to the new API.
 > - Progress: [DEVELOPMENT_PROGRESS.md](DEVELOPMENT_PROGRESS.md)
 > - Design: [Architecture](docs/ARCHITECTURE.md) · [Database](docs/DATABASE_SCHEMA.md) · [REST API](docs/API_DOCUMENTATION.md) · [Socket events](docs/SOCKET_EVENTS.md) · [Security](docs/SECURITY.md) · [Scalability](docs/SCALABILITY.md) · [Deployment](docs/DEPLOYMENT.md) · [Load testing](docs/LOAD_TESTING.md)
@@ -49,6 +50,24 @@ Prerequisites: Node.js 22+, Docker.
    npm --prefix server run dev
    ```
 4. Check it: http://localhost:3000/ready should return `{"status":"ready",...}`. Register with an `@vitstudent.ac.in` address via `POST /api/v1/auth/register`; the code arrives in Mailpit.
+
+### Running the rebuilt map shell (Phase 5)
+
+With the new server running (`npm --prefix server run dev`):
+```bash
+npm --prefix server run seed:dev
+```
+```bash
+npm --prefix client install
+```
+```bash
+npm --prefix client run dev:next
+```
+Open http://localhost:5173 and sign in as one of the demo students printed by the seed script (password: `DEMO_PASSWORD` in `server/scripts/seed-dev-constants.ts`). To see a friend move on the map, in another terminal:
+```bash
+npm --prefix server run simulate -- --email demo.ravi@vitstudent.ac.in --seconds 120 --speed 6
+```
+`client/.env` needs `VITE_MAPBOX_TOKEN`, and `VITE_API_URL` / `VITE_SOCKET_URL` pointing at the new server. Campus buildings come from OpenStreetMap (© OpenStreetMap contributors, ODbL); refresh them with `node ops/osm/fetch-buildings.mjs`.
 
 ### Running the current client (legacy server)
 
