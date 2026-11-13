@@ -27,6 +27,7 @@ export default function Login() {
   const login = useAuthStore((s) => s.login)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
@@ -63,18 +64,32 @@ export default function Login() {
           />
         </label>
 
-        <label className="block text-sm font-medium text-slate-700">
-          Password
-          <input
-            type="password"
-            name="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-        </label>
+        <div>
+          <label htmlFor="login-password" className="block text-sm font-medium text-slate-700">
+            Password
+          </label>
+          <div className="relative mt-1">
+            <input
+              id="login-password"
+              type={showPassword ? 'text' : 'password'}
+              name="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full rounded-lg border border-slate-300 py-2 pl-3 pr-16 text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-pressed={showPassword}
+              aria-controls="login-password"
+              className="absolute inset-y-0 right-0 px-3 text-xs font-medium text-slate-500 hover:text-brand-700"
+            >
+              {showPassword ? 'Hide' : 'Show'}
+            </button>
+          </div>
+        </div>
 
         {error && (
           <p role="alert" className="text-sm text-red-600">
