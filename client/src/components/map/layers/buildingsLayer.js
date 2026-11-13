@@ -1,6 +1,6 @@
 import mapboxgl from 'mapbox-gl'
 import { BUILDINGS_URL, OSM_ATTRIBUTION } from '../../../constants/map.js'
-import { renderHeight } from '../../../utils/mapFeatures.js'
+import { kindLabel, renderHeight } from '../../../utils/mapFeatures.js'
 import { popupContent } from '../popupContent.js'
 
 const SOURCE = 'campus-buildings'
@@ -60,7 +60,8 @@ export async function addBuildingsLayer(map) {
   }
   const onClick = (e) => {
     const p = e.features[0].properties
-    const lines = [p.kind ? `Type: ${p.kind}` : null, p.levels ? `${p.levels} levels` : null].filter(Boolean)
+    const levels = p.levels ? `${p.levels} ${p.levels === 1 ? 'level' : 'levels'}` : null
+    const lines = [kindLabel(p.kind), levels].filter(Boolean)
     new mapboxgl.Popup({ closeButton: false, offset: 8 })
       .setLngLat(e.lngLat)
       .setDOMContent(popupContent(p.name || 'Unnamed building', lines))

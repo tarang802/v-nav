@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { FRIEND_EXPIRE_MS, FRIEND_STALE_MS } from '../src/constants/map.js'
 import { friendFeatures, locationStore } from '../src/stores/locationStore.js'
-import { renderHeight } from '../src/utils/mapFeatures.js'
+import { kindLabel, renderHeight } from '../src/utils/mapFeatures.js'
 
 const s = () => locationStore.getState()
 const loc = (userId, ts, extra = {}) => ({ userId, lat: 12.8435, lng: 80.1555, accuracy: 12, ts, ...extra })
@@ -93,6 +93,14 @@ describe('map feature builders', () => {
     expect(renderHeight({ height: 21, levels: 5 })).toBe(21)
     expect(renderHeight({ height: null, levels: 5 })).toBe(16)
     expect(renderHeight({ height: null, levels: null })).toBe(4)
+  })
+
+  it('makes OSM building types readable', () => {
+    expect(kindLabel('dormitory')).toBe('Dormitory')
+    expect(kindLabel('sports_hall')).toBe('Sports hall')
+    expect(kindLabel(' university ')).toBe('University')
+    expect(kindLabel(null)).toBeNull()
+    expect(kindLabel('')).toBeNull()
   })
 
 })
