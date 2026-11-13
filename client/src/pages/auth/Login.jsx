@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useDocumentTitle } from '../../hooks/useDocumentTitle.js'
 import { useAuthStore } from '../../stores/authStore.js'
 
 function messageFor(err) {
@@ -24,6 +25,7 @@ function messageFor(err) {
 
 /** Sign-in. Registration, email verification and password reset screens arrive in Phase 7. */
 export default function Login() {
+  useDocumentTitle('Sign in')
   const login = useAuthStore((s) => s.login)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
