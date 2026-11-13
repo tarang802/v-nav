@@ -13,6 +13,7 @@ import { mapController } from './mapController.js'
 export default function FriendsOnMap({ loading, error }) {
   const ids = useStore(locationStore, (s) => Object.keys(s.locations).sort().join(','))
   const directory = useStore(locationStore, (s) => s.directory)
+  const presence = useStore(locationStore, (s) => s.presence)
   const [, tick] = useState(0)
 
   useEffect(() => {
@@ -51,13 +52,18 @@ export default function FriendsOnMap({ loading, error }) {
               >
                 <span
                   aria-hidden="true"
-                  className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${stale ? 'bg-slate-400' : 'bg-brand-500'}`}
+                  className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white ${stale ? 'bg-slate-400' : 'bg-brand-500'}`}
                 >
                   {initialsOf(r.name)}
+                  {presence[r.id]?.online && (
+                    <span className="absolute -bottom-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white" title="Online" />
+                  )}
                 </span>
                 <span className="min-w-0">
                   <span className="block truncate text-sm text-slate-900">{r.name}</span>
-                  <span className="block text-xs text-slate-500">Updated {agoLabel(r.ts, now)}</span>
+                  <span className="block text-xs text-slate-500">
+                    {stale ? `Last seen here ${agoLabel(r.ts, now)}` : `Updated ${agoLabel(r.ts, now)}`}
+                  </span>
                 </span>
               </button>
             </li>
