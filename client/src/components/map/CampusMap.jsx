@@ -33,6 +33,8 @@ export default function CampusMap() {
       attributionControl: true,
     })
     map.addControl(new mapboxgl.NavigationControl({ visualizePitch: true }), 'bottom-right')
+    // Distances on campus are short; a metric scale bar makes "how far is that" answerable at a glance.
+    map.addControl(new mapboxgl.ScaleControl({ maxWidth: 120, unit: 'metric' }), 'bottom-right')
     // Development builds only: lets the map be inspected from the browser console.
     if (import.meta.env.DEV) window.__vnavMap = map
 
