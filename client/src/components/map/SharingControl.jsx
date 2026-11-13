@@ -39,6 +39,16 @@ export default function SharingControl() {
     return () => clearInterval(t)
   }, [share.sharing, share.expiresAt])
 
+  // Escape dismisses the duration choices, like any other menu.
+  useEffect(() => {
+    if (!choosing) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') setChoosing(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [choosing])
+
   const run = async (fn) => {
     setBusy(true)
     setError(null)
@@ -86,7 +96,7 @@ export default function SharingControl() {
             onClick={() => setChoosing((v) => !v)}
             className="rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
           >
-            Share
+            {choosing ? 'Cancel' : 'Share'}
           </button>
         )}
       </div>
