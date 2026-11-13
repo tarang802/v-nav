@@ -49,6 +49,24 @@ export function initialsOf(name) {
   return (first + last).toUpperCase()
 }
 
+/**
+ * When an event is, relative to now: "Happening now", "Starts in 40 min",
+ * "Starts in 3 h", "Starts tomorrow", "Starts in 5 days", or "Ended".
+ */
+export function eventTimingLabel(startsAt, endsAt, now = Date.now()) {
+  const start = new Date(startsAt).getTime()
+  const end = new Date(endsAt).getTime()
+  if (!Number.isFinite(start)) return null
+  if (Number.isFinite(end) && end <= now) return 'Ended'
+  if (start <= now) return 'Happening now'
+  const minutes = Math.round((start - now) / 60_000)
+  if (minutes < 60) return `Starts in ${Math.max(1, minutes)} min`
+  const hours = Math.round(minutes / 60)
+  if (hours < 24) return `Starts in ${hours} h`
+  const days = Math.round(hours / 24)
+  return days === 1 ? 'Starts tomorrow' : `Starts in ${days} days`
+}
+
 /** "just now", "2 min ago", … for marker popups and lists. */
 export function agoLabel(ts, now = Date.now()) {
   const s = Math.max(0, Math.round((now - ts) / 1000))

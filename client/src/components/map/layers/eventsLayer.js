@@ -1,5 +1,6 @@
 import mapboxgl from 'mapbox-gl'
 import { EVENT_CATEGORY_COLORS } from '../../../constants/map.js'
+import { eventTimingLabel } from '../../../utils/geo.js'
 import { popupContent } from '../popupContent.js'
 
 const SOURCE = 'events'
@@ -67,7 +68,8 @@ export function addEventsLayer(map, initial = EMPTY) {
   const onPointClick = (e) => {
     const f = e.features[0]
     const when = f.properties.startsAt ? new Date(f.properties.startsAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : null
-    const lines = [when, f.properties.category].filter(Boolean)
+    const timing = eventTimingLabel(f.properties.startsAt, f.properties.endsAt)
+    const lines = [timing, when, f.properties.category].filter(Boolean)
     new mapboxgl.Popup({ closeButton: false, offset: 14 })
       .setLngLat(f.geometry.coordinates)
       .setDOMContent(popupContent(f.properties.title, lines))

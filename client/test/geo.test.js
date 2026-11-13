@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { agoLabel, circlePolygon, haversine, initialsOf, shouldSendFix } from '../src/utils/geo.js'
+import { agoLabel, circlePolygon, eventTimingLabel, haversine, initialsOf, shouldSendFix } from '../src/utils/geo.js'
 
 const here = { lat: 12.8435, lng: 80.1555, accuracy: 10 }
 /** About 11.1 m north per 0.0001° of latitude. */
@@ -62,5 +62,26 @@ describe('helpers', () => {
     expect(agoLabel(now - 40_000, now)).toBe('40 s ago')
     expect(agoLabel(now - 5 * 60_000, now)).toBe('5 min ago')
     expect(agoLabel(now - 3 * 3_600_000, now)).toBe('3 h ago')
+  })
+})
+
+describe('eventTimingLabel', () => {
+  const now = Date.parse('2026-11-13T10:00:00Z')
+  const at = (minutes) => new Date(now + minutes * 60_000).toISOString()
+
+  it('describes ongoing, upcoming and finished events', () => {
+    expect(eventTimingLabel(at(-30), at(30), now)).toBe('Happening now')
+    expect(eventTimingLabel(at(0), at(60), now)).toBe('Happening now')
+    expect(eventTimingLabel(at(-120), at(-60), now)).toBe('Ended')
+    expect(eventTimingLabel(at(0.2), at(60), now)).toBe('Starts in 1 min')
+    expect(eventTimingLabel(at(40), at(100), now)).toBe('Starts in 40 min')
+    expect(eventTimingLabel(at(180), at(240), now)).toBe('Starts in 3 h')
+    expect(eventTimingLabel(at(26 * 60), at(28 * 60), now)).toBe('Starts tomorrow')
+    expect(eventTimingLabel(at(5 * 24 * 60), at(5 * 24 * 60 + 60), now)).toBe('Starts in 5 days')
+  })
+
+  it('returns nothing for a missing start time', () => {
+    expect(eventTimingLabel(undefined, undefined, now)).toBeNull()
+    expect(eventTimingLabel('not a date', at(60), now)).toBeNull()
   })
 })
