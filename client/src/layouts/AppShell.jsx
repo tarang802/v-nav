@@ -3,6 +3,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Outlet } from 'react-router-dom'
 import { useStore } from 'zustand'
 import CampusMap from '../components/map/CampusMap.jsx'
+import MapLegend from '../components/map/MapLegend.jsx'
 import { mapController } from '../components/map/mapController.js'
 import { useGeolocationSharing } from '../hooks/useGeolocationSharing.js'
 import { fetchMapEvents } from '../services/events.js'
@@ -99,7 +100,8 @@ export default function AppShell() {
         </div>
       </main>
 
-      <div className="absolute right-3 top-20 z-10 flex flex-col gap-2">
+      <div className="absolute right-3 top-20 z-10 flex flex-col items-end gap-2">
+        <MapLegend />
         <button
           type="button"
           onClick={() => mapController.resetView()}
