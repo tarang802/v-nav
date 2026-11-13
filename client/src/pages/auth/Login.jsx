@@ -49,6 +49,7 @@ export default function Login() {
         <div>
           <h1 className="text-xl font-bold text-brand-700">V-Nav</h1>
           <p className="text-sm text-slate-500">Sign in with your VIT student email.</p>
+          <p className="mt-1 text-xs text-slate-400">Only @vitstudent.ac.in accounts can use V-Nav.</p>
         </div>
 
         <label className="block text-sm font-medium text-slate-700">
@@ -57,7 +58,9 @@ export default function Login() {
             type="email"
             name="email"
             autoComplete="username"
+            autoFocus
             required
+            aria-invalid={error ? true : undefined}
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
@@ -75,6 +78,7 @@ export default function Login() {
               name="password"
               autoComplete="current-password"
               required
+              aria-invalid={error ? true : undefined}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-lg border border-slate-300 py-2 pl-3 pr-16 text-sm"
