@@ -1,4 +1,5 @@
 import mapboxgl from 'mapbox-gl'
+import { EVENT_CATEGORY_COLORS } from '../../../constants/map.js'
 import { popupContent } from '../popupContent.js'
 
 const SOURCE = 'events'
@@ -9,6 +10,14 @@ const TITLES = 'events-titles'
 const FONT = ['DIN Pro Bold', 'Arial Unicode MS Bold']
 
 const EMPTY = { type: 'FeatureCollection', features: [] }
+
+/** Mapbox `match` expression: category → colour. */
+const CATEGORY_COLOR = [
+  'match',
+  ['get', 'category'],
+  ...Object.entries(EVENT_CATEGORY_COLORS).flatMap(([category, color]) => [category, color]),
+  EVENT_CATEGORY_COLORS.other,
+]
 
 /**
  * Clustered events layer, fed with the GeoJSON from `GET /events/map`
@@ -43,7 +52,7 @@ export function addEventsLayer(map, initial = EMPTY) {
     type: 'circle',
     source: SOURCE,
     filter: ['!', ['has', 'point_count']],
-    paint: { 'circle-color': '#f97316', 'circle-radius': 9, 'circle-stroke-width': 3, 'circle-stroke-color': '#ffffff' },
+    paint: { 'circle-color': CATEGORY_COLOR, 'circle-radius': 9, 'circle-stroke-width': 3, 'circle-stroke-color': '#ffffff' },
   })
   map.addLayer({
     id: TITLES,
@@ -52,7 +61,7 @@ export function addEventsLayer(map, initial = EMPTY) {
     minzoom: 15.5,
     filter: ['!', ['has', 'point_count']],
     layout: { 'text-field': ['get', 'title'], 'text-size': 11, 'text-font': FONT, 'text-offset': [0, 1.2], 'text-anchor': 'top', 'text-optional': true, 'text-max-width': 9 },
-    paint: { 'text-color': '#7c2d12', 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 },
+    paint: { 'text-color': '#1e293b', 'text-halo-color': '#ffffff', 'text-halo-width': 1.5 },
   })
 
   const onPointClick = (e) => {

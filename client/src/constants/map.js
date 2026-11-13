@@ -39,6 +39,18 @@ export const SEND_HEARTBEAT_MS = 30_000
 export const MAX_ACCURACY_M = 100
 export const HIDDEN_PAUSE_MS = 5 * 60_000
 
+/** Marker colour per event category. Unknown categories fall back to `other`. */
+export const EVENT_CATEGORY_COLORS = {
+  academic: '#2563eb',
+  technical: '#7c3aed',
+  cultural: '#db2777',
+  sports: '#16a34a',
+  club: '#0891b2',
+  career: '#ca8a04',
+  social: '#f97316',
+  other: '#64748b',
+}
+
 export const SHARE_DURATIONS = [
   { minutes: 15, label: '15 minutes' },
   { minutes: 60, label: '1 hour' },
