@@ -34,10 +34,18 @@ export default function FriendsOnMap({ loading, error }) {
         Friends on campus{rows.length > 0 && <span className="ml-1 text-slate-400">({rows.length})</span>}
       </h2>
 
-      {loading && <p className="mt-2 text-xs text-slate-500">Loading your friends…</p>}
+      {loading && (
+        <p role="status" className="mt-2 animate-pulse text-xs text-slate-500">
+          Loading your friends…
+        </p>
+      )}
       {error && <p role="alert" className="mt-2 text-xs text-red-600">Could not load your friends. Names may be missing.</p>}
       {!loading && rows.length === 0 && (
-        <p className="mt-2 text-xs text-slate-500">None of your friends are sharing their location right now.</p>
+        <p className="mt-2 text-xs text-slate-500">
+          {Object.keys(directory).length === 0
+            ? 'You have no friends on V-Nav yet. Share your friend code to add some.'
+            : 'None of your friends are sharing their location right now.'}
+        </p>
       )}
 
       <ul className="mt-2 max-h-56 space-y-1 overflow-y-auto">
