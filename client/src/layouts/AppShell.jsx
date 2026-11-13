@@ -28,6 +28,8 @@ export default function AppShell() {
   const connection = useStore(locationStore, (s) => s.connection)
   const hasSelf = useStore(locationStore, (s) => s.self !== null)
   const [signingOut, setSigningOut] = useState(false)
+  // On phones the panel covers the lower half of the map; it can be folded away.
+  const [panelOpen, setPanelOpen] = useState(true)
 
   useEffect(() => {
     connectSocket(queryClient)
@@ -83,7 +85,16 @@ export default function AppShell() {
       </header>
 
       <main className="pointer-events-none absolute inset-x-0 bottom-0 z-10 max-h-[55%] overflow-y-auto p-3 sm:inset-y-0 sm:left-0 sm:right-auto sm:top-16 sm:max-h-none sm:w-80">
-        <div className="pointer-events-auto space-y-3">
+        <button
+          type="button"
+          onClick={() => setPanelOpen((v) => !v)}
+          aria-expanded={panelOpen}
+          aria-controls="shell-panel"
+          className="pointer-events-auto mx-auto mb-2 block rounded-full bg-white px-4 py-1 text-xs font-medium text-slate-600 shadow ring-1 ring-slate-200 sm:hidden"
+        >
+          {panelOpen ? 'Hide panel' : 'Show panel'}
+        </button>
+        <div id="shell-panel" className={`pointer-events-auto space-y-3 ${panelOpen ? '' : 'hidden sm:block'}`}>
           <Outlet />
         </div>
       </main>
