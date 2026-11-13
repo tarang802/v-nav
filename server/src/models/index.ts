@@ -7,6 +7,7 @@ import { auditLogSchema, type AuditLog } from './AuditLog.js';
 import { friendRequestSchema, type FriendRequest } from './FriendRequest.js';
 import { friendshipSchema, type Friendship } from './Friendship.js';
 import { blockSchema, type Block } from './Block.js';
+import { eventSchema, type Event } from './Event.js';
 
 export interface Models {
   User: Model<User>;
@@ -17,6 +18,7 @@ export interface Models {
   FriendRequest: Model<FriendRequest>;
   Friendship: Model<Friendship>;
   Block: Model<Block>;
+  Event: Model<Event>;
 }
 
 /** Registers every model on the given connection. No global mongoose models are used. */
@@ -30,6 +32,7 @@ export function registerModels(conn: Connection): Models {
     FriendRequest: conn.model<FriendRequest>('FriendRequest', friendRequestSchema),
     Friendship: conn.model<Friendship>('Friendship', friendshipSchema),
     Block: conn.model<Block>('Block', blockSchema),
+    Event: conn.model<Event>('Event', eventSchema),
   };
 }
 

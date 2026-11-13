@@ -1,6 +1,6 @@
 # V-Nav Socket.IO Events
 
-Status: **Implemented and tested (Phase 4)**, except `event:changed` (Phase 6). Implementation: `server/src/realtime/socketServer.ts`. The handshake also checks the `Origin` header against `CLIENT_ORIGINS`, because CORS does not apply to WebSocket upgrades.
+Status: **Implemented and tested** (Phase 4; `event:changed` in Phase 6). Implementation: `server/src/realtime/socketServer.ts`. The handshake also checks the `Origin` header against `CLIENT_ORIGINS`, because CORS does not apply to WebSocket upgrades.
 
 Namespace: default `/`. Transport: **WebSocket only** (see ARCHITECTURE D5). Path: `/socket.io`. Every instance uses `@socket.io/redis-adapter`, so emitting to a room reaches sockets on any instance.
 
@@ -68,7 +68,7 @@ Payloads are validated with zod; unknown keys are stripped; invalid payloads get
 | `friend:request:received` | `{ requestId, from: PublicUser }` | `user:{to}` | New request |
 | `friend:request:accepted` | `{ friend: FriendUser }` | both users (`user:{from}` and `user:{to}`), each seeing the other | Request accepted, or a crossing request auto-accepted. If the new friend is currently sharing, a `friend:location` follows straight away. |
 | `friendship:removed` | `{ userId }` | both users | Unfriend or block (the blocked user sees only a removal, not the block) |
-| `event:changed` | `{ eventId, change: 'created' \| 'updated' \| 'cancelled' \| 'deleted' }` | Creator's friends, for **friends-only** events only (campus events are not pushed; see note) | Client invalidates its events query |
+| `event:changed` | `{ eventId, change: 'created' \| 'updated' \| 'cancelled' \| 'deleted' }` | The organiser's friends and the organiser's own tabs, for events that are (or were until this change) **friends-only**. Campus events are not pushed; see note. | Client invalidates its events queries |
 | `auth:expired` | `{ code: "TOKEN_EXPIRED" }` | the socket | Access token expired more than 60 s ago without `auth:refresh`; the socket is disconnected. Refresh over REST and reconnect. |
 | `session:revoked` | `{ reason }` | the affected session's sockets | Just before disconnect |
 | `server:shutdown` | `{ reconnectInMs }` | all sockets on a draining instance | Graceful shutdown. The instance first stops accepting connections, then sends this and closes the transports, so the client sees `transport close` and **reconnects automatically** to a healthy instance. |

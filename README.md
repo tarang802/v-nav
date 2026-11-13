@@ -5,8 +5,8 @@
 
 > **Rebuild in progress.** V-Nav is being rebuilt as a production-grade platform (verified student accounts, friend-only live location over Redis-backed Socket.IO, campus events).
 >
-> - **`server/`** is the new TypeScript API. Phases 2–4 (auth, sessions, infrastructure, friends and blocks, real-time location over Socket.IO) are done and tested.
-> - **`client/`** holds two apps until Phase 7: the original one (`npm run dev`, uses `server-legacy/`) and the rebuilt map shell from Phase 5 (`npm run dev:next`, uses `server/`). Events and the remaining screens follow.
+> - **`server/`** is the new TypeScript API. Phases 2–6 (auth, sessions, infrastructure, friends and blocks, real-time location over Socket.IO, events with image uploads) are done and tested.
+> - **`client/`** holds two apps until Phase 7: the original one (`npm run dev`, uses `server-legacy/`) and the rebuilt map shell (`npm run dev:next`, uses `server/`), which shows buildings, friends and events on the map. The remaining screens (registration, friends, event list and form, profile) follow in Phase 7.
 > - **`server-legacy/`** is the original Express server, kept unchanged so the current client still runs. It is deleted in Phase 7, when the client moves to the new API.
 > - Progress: [DEVELOPMENT_PROGRESS.md](DEVELOPMENT_PROGRESS.md)
 > - Design: [Architecture](docs/ARCHITECTURE.md) · [Database](docs/DATABASE_SCHEMA.md) · [REST API](docs/API_DOCUMENTATION.md) · [Socket events](docs/SOCKET_EVENTS.md) · [Security](docs/SECURITY.md) · [Scalability](docs/SCALABILITY.md) · [Deployment](docs/DEPLOYMENT.md) · [Load testing](docs/LOAD_TESTING.md)

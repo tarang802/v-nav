@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { FRIEND_EXPIRE_MS, FRIEND_STALE_MS } from '../src/constants/map.js'
 import { friendFeatures, locationStore } from '../src/stores/locationStore.js'
-import { eventFeatures, renderHeight } from '../src/utils/mapFeatures.js'
+import { renderHeight } from '../src/utils/mapFeatures.js'
 
 const s = () => locationStore.getState()
 const loc = (userId, ts, extra = {}) => ({ userId, lat: 12.8435, lng: 80.1555, accuracy: 12, ts, ...extra })
@@ -95,14 +95,4 @@ describe('map feature builders', () => {
     expect(renderHeight({ height: null, levels: null })).toBe(4)
   })
 
-  it('converts events and skips ones without a valid position', () => {
-    const fc = eventFeatures([
-      { id: 'e1', title: 'Hack night', startsAt: '2026-11-12T12:00:00Z', location: { type: 'Point', coordinates: [80.155, 12.843] } },
-      { id: 'e2', title: 'No place' },
-      { id: 'e3', title: 'Bad', location: { coordinates: ['x', 1] } },
-    ])
-    expect(fc.features).toHaveLength(1)
-    expect(fc.features[0]).toMatchObject({ properties: { eventId: 'e1', title: 'Hack night' }, geometry: { coordinates: [80.155, 12.843] } })
-    expect(eventFeatures(undefined).features).toEqual([])
-  })
 })

@@ -73,6 +73,9 @@ export function connectSocket(client) {
     invalidate(['friends'])
   })
 
+  // Friends-only events changed (campus-wide ones are refetched on a timer instead).
+  socket.on('event:changed', () => invalidate(['events']))
+
   // ── Session ──
   socket.on('session:revoked', () => useAuthStore.getState().clear())
   socket.on('auth:expired', () => {

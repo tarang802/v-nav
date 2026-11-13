@@ -157,7 +157,7 @@ Blocking, in one transaction: insert block → delete both friendship edges (dec
 | `category` | enum | `academic`, `technical`, `cultural`, `sports`, `club`, `career`, `social`, `other` |
 | `image` | `{ key, url } \| null` | Re-encoded WebP, EXIF stripped |
 | `location` | GeoJSON `Point` `{ type: 'Point', coordinates: [lng, lat] }` | Must be inside the campus polygon |
-| `venue` | `{ buildingId?: string, label: string }` | Building from the buildings layer, or free-text label |
+| `venue` | `{ buildingId: string \| null, label: string }` | `buildingId` is the OpenStreetMap id of a building in `campus-buildings.geojson` (`way/123`), or null with a free-text label |
 | `startsAt` | Date | Brief's "date + start time" |
 | `endsAt` | Date | Brief's "end time". `endsAt > startsAt`, max 14 days long |
 | `visibility` | `campus` \| `friends` | |

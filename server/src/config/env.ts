@@ -60,6 +60,13 @@ const EnvSchema = z.object({
   /** Identifies this process in presence records; defaults to hostname + pid. */
   INSTANCE_ID: z.string().regex(/^[A-Za-z0-9._:-]{1,64}$/).optional(),
 
+  /** Only `local` exists so far; an S3-compatible driver is planned for Phase 9. */
+  STORAGE_DRIVER: z.enum(['local']).default('local'),
+  /** Directory for processed uploads (local driver). */
+  UPLOAD_DIR: z.string().min(1).default('uploads'),
+  /** Public origin of this API, used to build image URLs. Defaults to http://localhost:PORT. */
+  API_PUBLIC_URL: z.url().optional(),
+
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 });
 
@@ -82,6 +89,8 @@ export interface Config {
   logLevel: Env['LOG_LEVEL'];
   campusBoundaryFile: string;
   instanceId: string;
+  storage: { driver: 'local'; uploadDir: string };
+  apiPublicUrl: string;
 }
 
 export class ConfigError extends Error {
@@ -128,6 +137,8 @@ export function loadConfig(source: NodeJS.ProcessEnv = process.env): Config {
     cookieSecure: e.COOKIE_SECURE,
     logLevel: e.LOG_LEVEL,
     campusBoundaryFile: e.CAMPUS_BOUNDARY_FILE,
+    storage: { driver: e.STORAGE_DRIVER, uploadDir: e.UPLOAD_DIR },
+    apiPublicUrl: (e.API_PUBLIC_URL ?? `http://localhost:${e.PORT}`).replace(/\/$/, ''),
     instanceId: e.INSTANCE_ID ?? `${hostname()}:${process.pid}`,
   };
 }

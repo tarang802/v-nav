@@ -12,6 +12,7 @@ node_modules/
 client/dist/
 server/dist/
 server/coverage/
+server/uploads/
 
 # ── Logs ───────────────────────────────────────────────────────
 *.log

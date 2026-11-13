@@ -19,6 +19,8 @@ export interface DomainEventMap {
   'session.revoked': { userId: Id; sessionIds: Id[]; reason: string; allSessions: boolean };
   'user.privacyChanged': { userId: Id };
   'location.stopped': { userId: Id; reason: LocationStopReason };
+  /** `friendsOnly` is true if the event is, or was until this change, visible to friends only. */
+  'event.changed': { eventId: Id; creatorId: Id; change: 'created' | 'updated' | 'cancelled' | 'deleted'; friendsOnly: boolean };
 }
 
 type Listener<T> = (payload: T) => void | Promise<void>;

@@ -468,3 +468,44 @@ describe('multiple instances', () => {
     expect(await removed).toEqual({ userId: alice.user.id });
   });
 });
+
+describe('event notifications', () => {
+  const body = (visibility: string) => ({
+    title: 'Study group',
+    category: 'academic',
+    location: ON_CAMPUS,
+    venue: { label: 'Library' },
+    startsAt: new Date(Date.now() + 3_600_000).toISOString(),
+    endsAt: new Date(Date.now() + 7_200_000).toISOString(),
+    visibility,
+  });
+
+  it('pushes friends-only event changes to friends and the organiser, and never to others', async () => {
+    const [alice, bob, eve] = [await student(), await student(), await student()];
+    await befriend(alice, bob);
+    const [ca, cb, ce] = [await connect(alice), await connect(bob, two), await connect(eve)];
+
+    const created = cb.nextNew('event:changed');
+    const own = ca.nextNew('event:changed');
+    const res = await http().post('/api/v1/events').set(bearer(alice)).send(body('friends')).expect(201);
+    const id = res.body.event.id as string;
+    expect(await created).toEqual({ eventId: id, change: 'created' });
+    expect(await own).toEqual({ eventId: id, change: 'created' });
+
+    // Opening it up to the whole campus is still announced, because friends' lists change.
+    const updated = cb.nextNew('event:changed');
+    await http().patch(`/api/v1/events/${id}`).set(bearer(alice)).send({ visibility: 'campus' }).expect(200);
+    expect(await updated).toEqual({ eventId: id, change: 'updated' });
+
+    await sleep(300);
+    expect(ce.count('event:changed')).toBe(0);
+  });
+
+  it('does not push campus-wide events to anyone', async () => {
+    const [alice, bob] = [await student(), await student()];
+    await befriend(alice, bob);
+    const cb = await connect(bob);
+    await http().post('/api/v1/events').set(bearer(alice)).send(body('campus')).expect(201);
+    await expectSilence(cb, 'event:changed', 500);
+  });
+});

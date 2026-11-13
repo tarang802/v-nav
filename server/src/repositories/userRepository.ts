@@ -119,6 +119,13 @@ export class UserRepository {
     return this.models.User.updateOne({ _id: id }, { $set: { lastSeenAt: at } }, { timestamps: false }).exec();
   }
 
+  /** Sets or clears the avatar and returns the user as it was before, so the old file can be removed. */
+  swapAvatar(id: Types.ObjectId, avatar: { key: string; url: string; updatedAt: Date } | null) {
+    return this.models.User.findOneAndUpdate({ _id: id, status: 'active' }, { $set: { avatar } }, { new: false })
+      .lean<User>()
+      .exec();
+  }
+
   updateProfile(id: Types.ObjectId, data: { name?: string }) {
     return this.models.User.findOneAndUpdate({ _id: id, status: 'active' }, { $set: data }, { new: true })
       .lean<User>()

@@ -74,7 +74,11 @@ export default function CampusMap() {
   }
   return (
     <>
-      <div ref={containerRef} className="absolute inset-0" aria-label="Campus map" />
+      {/* Mapbox sets `position: relative` on its container, which would cancel `absolute` there
+          and collapse it to zero height. So the wrapper is positioned and the map fills it. */}
+      <div className="absolute inset-0">
+        <div ref={containerRef} className="h-full w-full" aria-label="Campus map" />
+      </div>
       {buildingsError && (
         <div role="status" className="absolute bottom-10 left-1/2 -translate-x-1/2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 shadow">
           Campus buildings could not be loaded. Reload to try again.

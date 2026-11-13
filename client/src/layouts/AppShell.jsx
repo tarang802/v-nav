@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { Outlet } from 'react-router-dom'
 import { useStore } from 'zustand'
 import CampusMap from '../components/map/CampusMap.jsx'
 import { mapController } from '../components/map/mapController.js'
 import { useGeolocationSharing } from '../hooks/useGeolocationSharing.js'
+import { fetchMapEvents } from '../services/events.js'
 import { connectSocket, disconnectSocket } from '../sockets/socketClient.js'
 import { useAuthStore } from '../stores/authStore.js'
 import { locationStore } from '../stores/locationStore.js'
@@ -30,10 +31,19 @@ export default function AppShell() {
 
   useEffect(() => {
     connectSocket(queryClient)
-    return () => disconnectSocket()
+    return () => {
+      disconnectSocket()
+      mapController.setEventCollection(null) // nothing from this session stays on the map after sign-out
+    }
   }, [queryClient])
 
   useGeolocationSharing()
+
+  // Events on the map: refreshed every 2 minutes, and at once when a friend's event changes.
+  const mapEvents = useQuery({ queryKey: ['events', 'map'], queryFn: fetchMapEvents, refetchInterval: 120_000 })
+  useEffect(() => {
+    if (mapEvents.data) mapController.setEventCollection(mapEvents.data)
+  }, [mapEvents.data])
 
   const signOut = async () => {
     setSigningOut(true)

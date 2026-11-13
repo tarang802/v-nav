@@ -1,6 +1,6 @@
 # V-Nav REST API
 
-Status: **Approved design.** Implemented and tested so far: all of §2 Auth; §3 Users except avatar upload and account deletion; all of §4 Friends, §5 Blocks and §6 Location; `/health`, `/ready`. Everything else is design only until its phase lands; [DEVELOPMENT_PROGRESS.md](../DEVELOPMENT_PROGRESS.md) is the source of truth. An OpenAPI 3.1 file generated from the zod validators is planned for Phase 7, when the client consumes the API; this document is authoritative until then.
+Status: **Approved design.** Implemented and tested so far: all of §2 Auth; §3 Users except account deletion (`DELETE /users/me`); all of §4 Friends, §5 Blocks, §6 Location and §7 Events; `/health`, `/ready`. Not yet built: account deletion and `/metrics`. [DEVELOPMENT_PROGRESS.md](../DEVELOPMENT_PROGRESS.md) is the source of truth. An OpenAPI 3.1 file generated from the zod validators is planned for Phase 7; this document is authoritative until then.
 
 Base URL: `/api/v1`. All bodies are JSON unless noted. All timestamps are ISO 8601 UTC.
 
@@ -30,7 +30,7 @@ Live location is **not** available over REST. It is delivered only over authenti
 | 409 | `EMAIL_TAKEN`, `REG_NO_TAKEN`, `ALREADY_FRIENDS`, `FRIEND_REQUEST_EXISTS`, `FRIEND_LIMIT_REACHED` |
 | 413 | `PAYLOAD_TOO_LARGE` |
 | 415 | `UNSUPPORTED_MEDIA_TYPE` |
-| 422 | `OFF_CAMPUS`, `INVALID_TIME_RANGE` |
+| 422 | `OFF_CAMPUS`, `INVALID_TIME_RANGE` (events) |
 | 429 | `RATE_LIMITED`, `ACCOUNT_LOCKED` (both with `Retry-After`) |
 | 503 | `NOT_READY` |
 
@@ -118,13 +118,13 @@ Starting sharing is socket-only, because it is meaningless without a live connec
 
 | Method & path | Auth | Body / query | Success | Notes |
 |---|---|---|---|---|
-| `GET /events` | 🔒 | `?from&to&category&visibility&creator=me&limit&cursor` | `200 { items: Event[], nextCursor }` | Default window: now → +30 days. Only events the viewer may see. |
-| `GET /events/map` | 🔒 | `?bbox=minLng,minLat,maxLng,maxLat&from&to` | `200 GeoJSON FeatureCollection` | Lightweight properties (`id, title, category, startsAt`), max 500 features. Used by the map layer. |
-| `GET /events/:id` | 🔒 | — | `200 { event }` | `404` if not visible to viewer |
-| `POST /events` | 🔒 | `{ title, description?, category, location: {lat,lng}, venue, startsAt, endsAt, visibility }` | `201 { event }` | Location must be on campus (`422 OFF_CAMPUS`). 20/day per user. |
-| `PATCH /events/:id` | 🔒 | any subset of the above, or `{ status: 'cancelled' }` | `200 { event }` | Creator only |
-| `DELETE /events/:id` | 🔒 | — | `204` | Creator, or `moderator`/`admin` (audited) |
-| `PUT /events/:id/image` | 🔒 | multipart `image` | `200 { imageUrl }` | Creator only. ≤ 5 MB, re-encoded to max 1,600 px WebP |
+| `GET /events` | 🔒 | `?from&to&category&visibility&creator=me&limit&cursor` | `200 { items: Event[], nextCursor }` | Default window: now → +30 days (max one year). Soonest first; cursor on `(startsAt, id)`. Only active events the viewer may see; `creator=me` lists the viewer's own events including cancelled ones. |
+| `GET /events/map` | 🔒 | `?bbox=minLng,minLat,maxLng,maxLat&from&to` | `200 GeoJSON FeatureCollection` | Lightweight properties (`id, title, category, startsAt, endsAt`), max 500 features, same visibility rules as the list. `bbox` may cover at most one degree per side. Used by the map layer. |
+| `GET /events/:id` | 🔒 | — | `200 { event }` | `404` if not visible to viewer. Cancelled events stay reachable here (with `status: "cancelled"`) but are left out of lists and the map. |
+| `POST /events` | 🔒 | `{ title, description?, category, location: {lat,lng}, venue: { buildingId?, label }, startsAt, endsAt, visibility }` | `201 { event }` | Times are ISO 8601 with offset. `422 OFF_CAMPUS` if the location is outside the campus boundary. `422 INVALID_TIME_RANGE` if it ends before it starts, lasts over 14 days, has already ended, or starts more than a year ahead. `venue.buildingId` is an OpenStreetMap id from `campus-buildings.geojson` (`way/123`). 20/day per user. |
+| `PATCH /events/:id` | 🔒 | any subset of the above, or `{ status: 'cancelled' }` | `200 { event }` | Organiser only: `403` for someone who can see the event, `404` for someone who cannot. Campus and time rules are re-checked. Cancelling is one-way. |
+| `DELETE /events/:id` | 🔒 | — | `204` | Organiser, or `moderator`/`admin` (written to the audit log). Deletes the image file too. |
+| `PUT /events/:id/image` | 🔒 | multipart `image` | `200 { imageUrl }` | Organiser only. JPEG/PNG/WebP ≤ 5 MB (`413` above), type decided by file content (`415` otherwise; SVG refused), re-encoded to max 1,600 px WebP with all metadata removed. Replaces and deletes the previous image. 20 uploads/h per user. |
 | `DELETE /events/:id/image` | 🔒 | — | `204` | |
 
 `Event` shape:

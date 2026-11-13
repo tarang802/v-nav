@@ -15,6 +15,9 @@ COPY --from=build --chown=node:node /app/node_modules ./node_modules
 COPY --from=build --chown=node:node /app/dist ./dist
 COPY --chown=node:node package.json ./
 COPY --chown=node:node data ./data
+# Processed uploads (local storage driver). Mount a volume here to keep them across deploys.
+RUN mkdir -p /app/uploads && chown node:node /app/uploads
+VOLUME /app/uploads
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=15s --timeout=3s --start-period=20s --retries=3 \

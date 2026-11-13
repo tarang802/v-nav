@@ -1,5 +1,4 @@
 import mapboxgl from 'mapbox-gl'
-import { eventFeatures } from '../../../utils/mapFeatures.js'
 import { popupContent } from '../popupContent.js'
 
 const SOURCE = 'events'
@@ -9,12 +8,15 @@ const POINTS = 'events-points'
 const TITLES = 'events-titles'
 const FONT = ['DIN Pro Bold', 'Arial Unicode MS Bold']
 
+const EMPTY = { type: 'FeatureCollection', features: [] }
+
 /**
- * Clustered events layer. It starts empty: the events API arrives in Phase 6,
- * which calls `setEvents` with real data. Nothing is drawn until then.
+ * Clustered events layer, fed with the GeoJSON from `GET /events/map`
+ * (properties: id, title, category, startsAt, endsAt). The server has already
+ * applied the visibility rules; this layer only draws what it is given.
  */
-export function addEventsLayer(map) {
-  map.addSource(SOURCE, { type: 'geojson', data: eventFeatures([]), cluster: true, clusterMaxZoom: 17, clusterRadius: 50 })
+export function addEventsLayer(map, initial = EMPTY) {
+  map.addSource(SOURCE, { type: 'geojson', data: initial, cluster: true, clusterMaxZoom: 17, clusterRadius: 50 })
 
   map.addLayer({
     id: CLUSTERS,
@@ -55,10 +57,11 @@ export function addEventsLayer(map) {
 
   const onPointClick = (e) => {
     const f = e.features[0]
-    const when = f.properties.startsAt ? new Date(f.properties.startsAt).toLocaleString() : null
+    const when = f.properties.startsAt ? new Date(f.properties.startsAt).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }) : null
+    const lines = [when, f.properties.category].filter(Boolean)
     new mapboxgl.Popup({ closeButton: false, offset: 14 })
       .setLngLat(f.geometry.coordinates)
-      .setDOMContent(popupContent(f.properties.title, when ? [when] : []))
+      .setDOMContent(popupContent(f.properties.title, lines))
       .addTo(map)
   }
   const onClusterClick = (e) => {
@@ -71,7 +74,7 @@ export function addEventsLayer(map) {
   map.on('click', CLUSTERS, onClusterClick)
 
   return {
-    setEvents: (events) => map.getSource(SOURCE)?.setData(eventFeatures(events)),
+    setData: (collection) => map.getSource(SOURCE)?.setData(collection ?? EMPTY),
     remove: () => {
       map.off('click', POINTS, onPointClick)
       map.off('click', CLUSTERS, onClusterClick)

@@ -14,7 +14,10 @@ x-api: &api
     SMTP_HOST: mailpit
     SMTP_PORT: '1025'
     TRUST_PROXY: '1'
+    API_PUBLIC_URL: http://localhost:8080
     LOG_LEVEL: info
+  # Both instances share one uploads volume, so an image stored by one is served by the other.
+  volumes: ['uploads:/app/uploads']
   depends_on:
     mongo: { condition: service_healthy }
     redis: { condition: service_healthy }

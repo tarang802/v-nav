@@ -74,5 +74,7 @@ export const Limits = {
   forgotEmailHour: { name: 'forgot:email:h', limit: 3, windowSeconds: 60 * 60 },
   refreshIp: { name: 'refresh:ip', limit: 60, windowSeconds: 60 },
   lookupUser: { name: 'lookup:user', limit: 60, windowSeconds: 60 * 60 },
+  eventCreateUser: { name: 'event:user', limit: 20, windowSeconds: 24 * 60 * 60 },
+  uploadUser: { name: 'upload:user', limit: 20, windowSeconds: 60 * 60 },
   friendRequestUser: { name: 'friendreq:user', limit: 30, windowSeconds: 60 * 60 },
 } satisfies Record<string, LimitRule>;

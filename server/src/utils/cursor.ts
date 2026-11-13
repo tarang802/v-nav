@@ -28,8 +28,16 @@ export function decodeCursor(raw: string | undefined): CursorKey | null {
   }
 }
 
-/** Mongo filter for "strictly after the cursor" given a (field desc, _id desc) sort. */
-export function afterCursor(field: string, c: CursorKey | null): Record<string, unknown> {
+/**
+ * Mongo filter for "strictly after the cursor" given a sort on (field, _id),
+ * both descending (default) or both ascending.
+ */
+export function afterCursor(
+  field: string,
+  c: CursorKey | null,
+  direction: 'desc' | 'asc' = 'desc',
+): Record<string, unknown> {
   if (!c) return {};
-  return { $or: [{ [field]: { $lt: c.t } }, { [field]: c.t, _id: { $lt: c.id } }] };
+  const op = direction === 'desc' ? '$lt' : '$gt';
+  return { $or: [{ [field]: { [op]: c.t } }, { [field]: c.t, _id: { [op]: c.id } }] };
 }

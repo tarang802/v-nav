@@ -1,3 +1,6 @@
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 /**
  * Test environment. Uses the Docker Compose MongoDB (separate `vnav_test`
  * database) and Redis (DB 15), never the development data.
@@ -7,6 +10,8 @@ export const TEST_MONGO_URI =
 export const TEST_REDIS_URL = process.env.TEST_REDIS_URL ?? 'redis://localhost:6380/15';
 
 export const TEST_ORIGIN = 'http://localhost:5173';
+/** Throwaway directory for uploads made by tests. */
+export const TEST_UPLOAD_DIR = join(tmpdir(), 'vnav-test-uploads');
 
 export const testEnv: NodeJS.ProcessEnv = {
   NODE_ENV: 'test',
@@ -23,5 +28,7 @@ export const testEnv: NodeJS.ProcessEnv = {
   SMTP_PORT: '1025',
   MAIL_FROM: 'V-Nav Test <test@vnav.example>',
   COOKIE_SECURE: 'true',
+  UPLOAD_DIR: TEST_UPLOAD_DIR,
+  API_PUBLIC_URL: 'http://localhost:3999',
   LOG_LEVEL: 'silent',
 };

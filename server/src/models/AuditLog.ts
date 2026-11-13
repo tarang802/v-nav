@@ -15,6 +15,7 @@ export const AUDIT_ACTIONS = [
   'password_reset',
   'user_blocked',
   'user_unblocked',
+  'event_removed_by_moderator',
 ] as const;
 export type AuditAction = (typeof AUDIT_ACTIONS)[number];
 

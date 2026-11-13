@@ -21,6 +21,10 @@ import { Geofence } from './realtime/geofence.js';
 import { LocationService } from './services/locationService.js';
 import { LocationStore } from './services/locationStore.js';
 import { PresenceService } from './services/presenceService.js';
+import { EventRepository } from './repositories/eventRepository.js';
+import { EventService } from './services/eventService.js';
+import { ImageService } from './services/imageService.js';
+import { LocalStorage, type StorageAdapter } from './storage/storage.js';
 import { FriendService } from './services/friendService.js';
 import { RelationshipCache } from './services/relationshipCache.js';
 
@@ -47,13 +51,17 @@ export interface Container {
     friends: FriendService;
     location: LocationService;
     presence: PresenceService;
+    images: ImageService;
+    events: EventService;
   };
+  storage: StorageAdapter;
 }
 
 export interface ContainerOverrides {
   mailTransport?: MailTransport;
   passwordService?: PasswordService;
   geofence?: Geofence;
+  storage?: StorageAdapter;
 }
 
 /** Composition root: the only place that wires concrete implementations together. */
@@ -99,6 +107,19 @@ export function buildContainer(
   const geofence = overrides.geofence ?? Geofence.fromFile(config.campusBoundaryFile);
   const location = new LocationService(new LocationStore(redis), relationships, geofence, events);
   const presence = new PresenceService(redis);
+  const storage = overrides.storage ?? new LocalStorage(config.storage.uploadDir, config.apiPublicUrl);
+  const images = new ImageService(storage, logger);
+  const eventService = new EventService({
+    events: new EventRepository(models),
+    users,
+    cache: relationships,
+    geofence,
+    images,
+    limiter,
+    audit,
+    bus: events,
+    appPublicUrl: config.appPublicUrl,
+  });
 
   // Signing out of every device also ends location sharing, whether or not a socket is connected.
   events.on('session.revoked', async ({ userId, allSessions }) => {
@@ -114,6 +135,7 @@ export function buildContainer(
     lifecycle: { shuttingDown: false },
     events,
     repos: { users, social },
-    services: { tokens, sessions, limiter, auth, relationships, friends, location, presence },
+    services: { tokens, sessions, limiter, auth, relationships, friends, location, presence, images, events: eventService },
+    storage,
   };
 }

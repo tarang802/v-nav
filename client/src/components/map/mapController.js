@@ -6,11 +6,14 @@ import { CAMPUS_VIEW } from '../../constants/map.js'
  */
 let map = null
 let events = null
+/** Latest events GeoJSON; kept so it can be applied when the map finishes loading. */
+let eventData = null
 
 export const mapController = {
   attach(instance, layers) {
     map = instance
     events = layers?.events ?? null
+    if (eventData) events?.setData(eventData)
   },
   detach() {
     map = null
@@ -22,8 +25,9 @@ export const mapController = {
   resetView() {
     map?.flyTo({ ...CAMPUS_VIEW, essential: true })
   },
-  /** Phase 6 feeds the events layer through this. */
-  setEvents(list) {
-    events?.setEvents(list)
+  /** GeoJSON FeatureCollection from `GET /events/map`, or null to clear. */
+  setEventCollection(collection) {
+    eventData = collection
+    events?.setData(collection)
   },
 }

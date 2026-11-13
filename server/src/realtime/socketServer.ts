@@ -379,6 +379,15 @@ export function attachRealtime(http: HttpServer, c: Container, opts: RealtimeOpt
       }
     }),
 
+    // Friends-only events: tell the organiser's friends (and their own tabs) to refresh.
+    // Campus-wide events are not pushed; clients refetch them periodically.
+    c.events.on('event.changed', async ({ eventId, creatorId, change, friendsOnly }) => {
+      if (!friendsOnly) return;
+      const payload = { eventId: eventId.toHexString(), change };
+      io.to(userRoom(creatorId.toHexString())).emit('event:changed', payload);
+      emitToFriends(await relationships.friendIds(creatorId), 'event:changed', payload);
+    }),
+
     c.events.on('user.privacyChanged', async ({ userId }) => {
       const uid = userId.toHexString();
       const user = await users.findActiveById(userId);

@@ -1,6 +1,6 @@
 # V-Nav Development Progress
 
-Last updated: 2026-11-12 (Phase 5)
+Last updated: 2026-11-13 (Phase 6)
 
 A module counts as **complete** only when its code exists, its tests have been run and pass, and the result is recorded below. Generated code alone counts as "in progress".
 
@@ -17,7 +17,7 @@ A module counts as **complete** only when its code exists, its tests have been r
 | 3 — Friend system | Friend codes, requests, friendships, blocks, lists | ✅ Done — 82 tests passing (see below) |
 | 4 — Real-time location | Socket auth, Redis adapter, sharing state, friend-only delivery, revocation, presence, reconnection | ✅ Done — 111 tests passing, two-instance stack verified (see below) |
 | 5 — Map | Persistent map shell, verified buildings layer, friend and event layers, clustering | ✅ Done, with one gap: map painting not seen on screen (see known gaps) |
-| 6 — Events | CRUD, visibility, discovery, filters, pagination, map integration, images | ⬜ |
+| 6 — Events | CRUD, visibility, discovery, filters, pagination, map integration, images | ✅ Done — 136 server + 27 client tests passing (see below) |
 | 7 — Frontend integration | Connect every screen to real APIs and sockets; remove mock/dead UI; responsive + mobile sheets | ⬜ |
 | 8 — Testing and optimisation | Unit, integration, E2E (Playwright), security, load tests (Artillery); fix findings | ⬜ |
 | 9 — Deployment | Production Docker config, env templates, CI/CD, production config, deployment and monitoring docs | ⬜ |
@@ -68,10 +68,22 @@ A module counts as **complete** only when its code exists, its tests have been r
   - **Sharing:** `useGeolocationSharing` watches GPS only while sharing, applies the send policy (≥ 10 m and ≥ 3 s, or 30 s heartbeat, accuracy ≤ 100 m), pauses after 5 min hidden, never retries a denied permission. Sharing control with durations, countdown, and notices for blocked permission, off campus and weak GPS. "Friends on campus" panel that flies to a friend.
   - **Dev tools (server):** `npm run seed:dev` (three verified demo students who are friends; local databases only) and `npm run simulate` (a demo student shares a moving position between real OSM buildings through the real API and socket server).
   - Popups are built with `textContent`, so names can never be interpreted as HTML. OSM attribution is shown on the map.
+- **Phase 6 events** (`multer` 2.5, `sharp` 0.35):
+  - `events` collection with the four designed indexes (discovery, organiser, 2dsphere, category).
+  - Rules in `EventService`: location must be inside the campus boundary (`422 OFF_CAMPUS`); end after start, at most 14 days long, not already over, at most a year ahead (`422 INVALID_TIME_RANGE`); 20 new events per day per student.
+  - **Visibility, decided only on the server:** campus-wide events for everyone; friends-only events for the organiser and their friends; nothing between students in a block relationship, in either direction; a hidden event is a 404. The same filter serves the list, the map endpoint and single-event access.
+  - Discovery: default window of the next 30 days (upcoming and ongoing), filters for date range, category, visibility and "my events", cursor pagination on `(startsAt, id)` that is stable when events share a start time.
+  - `GET /events/map`: GeoJSON for a bounding box, lightweight properties, capped at 500.
+  - Update and cancel by the organiser only (403 for viewers, 404 for those who cannot see it); delete by the organiser, or by a moderator/admin with an audit record. Cancelled events leave lists but stay reachable by link.
+  - **Image pipeline** (`ImageService`): type decided from file content, never from the name or declared type; JPEG, PNG and WebP only (SVG and undecodable files refused, 415); 5 MB cap (413); pixel-count cap against decompression bombs; EXIF orientation applied, then re-encoded to WebP with all metadata removed; random server-generated names; old files deleted on replace, removal and event deletion. Used for event images (max 1,600 px) and profile pictures (512 px, `PUT`/`DELETE /users/me/avatar`).
+  - `StorageAdapter` interface with a local-disk driver; `/uploads` served with a fixed `image/webp` type, `nosniff` and immutable caching.
+  - `event:changed` socket notification to the organiser's friends and own tabs for friends-only events.
+  - **Client map integration:** the shell fetches `/events/map` for the campus, refreshes every 2 minutes and when `event:changed` arrives, and draws the clustered events layer with a popup (title, time, category).
+  - `seed:dev` also creates two demo events at real buildings (one campus-wide, one friends-only).
 - The pre-rebuild server moved to `server-legacy/` (unchanged, still runnable) so the current client keeps working until Phase 7, when it is deleted.
 
 ## Pending modules
-Phases 6–9. Phase 0.5 dead-file cleanup is folded into Phase 7.
+Phases 7–9. Phase 0.5 dead-file cleanup is folded into Phase 7.
 
 ## Phase 2 deviations from the Phase 1 docs (docs updated)
 | Change | Why |
@@ -117,6 +129,17 @@ Phases 6–9. Phase 0.5 dead-file cleanup is folded into Phase 7.
 | Buildings file is `campus-buildings.geojson`; extrusion height is OSM height, else OSM levels × 3.2 m, else a 4 m drawing default | 14 of 27 buildings have no height data in OSM; the default is a rendering choice, not a measurement, and is labelled as such in code. |
 | Client tooling upgraded to Vite 8, @vitejs/plugin-react 6, Vitest 5; `npm audit fix` applied | Vitest needs Vite ≥ 6, and the client had 9 audit findings (axios, form-data, nanoid, esbuild and others); now 0. The original app still builds. |
 | `VITE_API_URL` is used directly (CORS + credentials) rather than the Vite proxy | Same code path as production, where the API is on another origin. |
+
+## Phase 6 deviations from the Phase 1 docs (docs updated)
+| Change | Why |
+|---|---|
+| Only the `local` storage driver exists; `s3` moved to Phase 9 | An S3 driver cannot be tested without a bucket or a MinIO container, and nothing needs it before deployment. The interface is in place. |
+| New `API_PUBLIC_URL` and `UPLOAD_DIR` settings | Image URLs need the API's public origin; the upload directory must be a mountable volume. |
+| `GET /events/map` features also carry `endsAt` | Lets the map tell ongoing from upcoming events without a second request. |
+| `event:changed` also goes to the organiser's own tabs, and is sent when a friends-only event becomes campus-wide | Other tabs and friends' lists both need to refresh in those cases. |
+| Cancelling is one-way through the API | Avoids an event flickering between cancelled and active for people who already saw the cancellation. |
+| Events cannot start more than a year ahead; listing windows are capped at a year | Bounds on otherwise unbounded inputs. |
+| Event screens (list, detail, form) are not in this phase | Phase 6 is the API and the map layer; every remaining screen is built in Phase 7. |
 
 ## Not yet implemented (deliberately)
 | Feature | Reason |
@@ -168,12 +191,13 @@ Full reasoning in [docs/ARCHITECTURE.md §3](docs/ARCHITECTURE.md). Summary:
 - Suspension / roles have no admin endpoints yet (`requireRole` exists, unused).
 - Relationship-cache invalidation runs after the database commit. If that Redis call fails, the stale entry can survive until its 10-minute TTL (logged at error level). Decision in Phase 4: accepted, because every location update also needs Redis (rate limit, sharing flag, store); while Redis is failing, updates are not delivered at all, so the stale entry cannot leak positions in practice. Revisit if Redis gets a partial-failure mode (e.g. cluster) in Phase 9.
 - No socket-level metrics yet (connected clients, updates/s, fan-out size); planned with `/metrics` in Phase 9. Load tests for 500 sockets / 200 sharers are Phase 8; **none have been run**.
-- `event:changed` is Phase 6.
-- **Phase 5: the map has not been seen painting on screen.** During verification the desktop Browser pane was hidden and delivered no animation frames, so no screenshot was possible. What was verified through the page instead: the Mapbox style loaded with the project token, all 12 custom layers and the 27 buildings were present, and the real friends-layer code put a moving friend into the map source. Colours, label placement, clustering appearance and the mobile layout still need a look in a visible browser (`npm run dev:next`, then `npm run simulate` in `server/`).
+- Images use local disk storage only. Several instances work only with a shared volume (the multi-instance Compose file has one); an S3-compatible driver is Phase 9 and its `S3_*` variables are not read yet.
+- **The map has still not been seen on screen by a person.** The desktop Browser pane was hidden in every session, so no screenshot was possible. In Phase 6 the page was driven with timer-based animation frames instead, and Mapbox reported what it drew: all 27 buildings with labels and both demo events at the default view. That check found and fixed a real bug (the map was only 300 px tall). Colours, label placement, cluster appearance and the mobile layout still need a look in a visible browser (`npm run dev:next`, then `npm run simulate` in `server/`).
 - Own-position marker and the GPS send path could not be exercised in the browser (geolocation is blocked in the test pane); the send policy is unit-tested and the blocked-permission notice was seen.
 - The fabricated `client/public/data/vit-buildings.geojson` is still used by the original app and is deleted with it in Phase 7. The rebuilt shell does not load it.
 - No component or end-to-end tests for the client yet (Playwright is Phase 8); client tests cover pure logic only.
-- Avatars (`PUT /users/me/avatar`) and account deletion (`DELETE /users/me`) are not built yet; they need the upload pipeline (Phase 6) and a full cascade (Phase 8).
+- Account deletion (`DELETE /users/me`) is not built yet; it needs a full cascade over sessions, friendships, blocks, events and images (Phase 8).
+- There are no event screens yet (list, detail, create/edit form, image picker); events are created through the API or `seed:dev`. Those screens are Phase 7. Friend markers still show initials rather than avatars.
 
 ## Tests executed
 | Date | What | Result |
@@ -201,5 +225,10 @@ Full reasoning in [docs/ARCHITECTURE.md §3](docs/ARCHITECTURE.md). Summary:
 | 2026-11-11 | Manual: Share → 15 minutes → server state on, blocked-permission notice; reload keeps state; Stop; Sign out | ✅ (found and fixed: countdown showed 18 min for a 15 min share) |
 | 2026-11-12 | `server: npm test` after adding the dev scripts; `tsc --noEmit`; `npm audit` | ✅ 111/111 passed, 2 consecutive runs; 0 vulnerabilities |
 | 2026-11-12 | Second attempt to view the map in the Browser pane | ⚠️ Pane still hidden (0 animation frames); not verified |
+
+| 2026-11-13 | `server: npm test`: 136 tests (23 new event and upload tests, 2 new socket tests) | ✅ 136/136 passed, 3 consecutive runs |
+| 2026-11-13 | Upload checks inside that suite: GPS-tagged 3000×2000 JPEG comes back as 1600×1067 WebP with no EXIF; SVG, HTML and fake-JPEG files refused; 5 MB cap; files removed on replace/delete | ✅ |
+| 2026-11-13 | `tsc --noEmit`, `npm run build`, `npm audit` (server); `npm test` 27/27, both builds, `npm audit` (client) | ✅ 0 vulnerabilities |
+| 2026-11-13 | Manual, real API + browser: a friend of the organiser gets both demo events (campus-wide and friends-only) from `/events/map`; Mapbox reports both event markers, one title label and all 27 buildings drawn at the default view | ✅ after fixing the map height bug (canvas was 1024×300; now fills the window) |
 
 Load tests: none run yet (Phase 8).

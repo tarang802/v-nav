@@ -153,7 +153,7 @@ Each item gets a test reference or verification note when completed.
 - [ ] zod validation on every route and socket event
 - [ ] `$`-operator payloads rejected (NoSQL injection tests)
 - [ ] Body and socket frame size limits enforced
-- [ ] Uploads: type by magic bytes, size cap, EXIF stripped (test with GPS-tagged JPEG), SVG rejected
+- [x] Uploads: type by magic bytes, size cap, EXIF stripped (tested with a GPS-tagged JPEG), SVG rejected, undecodable files rejected (Phase 6, `test/integration/events.test.ts`)
 - [ ] CORS exact allowlist; credentials only for allowlisted origins
 - [ ] CSRF defences on cookie endpoints (missing header / foreign Origin → 403)
 - [ ] helmet headers and CSP present

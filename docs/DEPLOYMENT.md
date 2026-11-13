@@ -125,8 +125,10 @@ Placeholders only; real values live in the host's secret manager.
 | `APP_PUBLIC_URL` | `https://app.vnav.example` (links in emails) | yes |
 | `CAMPUS_BOUNDARY_FILE` | path to campus polygon GeoJSON (default `data/campus-boundary.geojson`, shipped in the image) | no |
 | `INSTANCE_ID` | label for this replica (default hostname:pid) | no |
-| `STORAGE_DRIVER` | `local` \| `s3` | yes |
-| `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL` | provider values | if `s3` |
+| `STORAGE_DRIVER` | `local` (the only driver so far: files in `UPLOAD_DIR`, served by the API at `/uploads`). `s3` is planned for Phase 9. | no, default `local` |
+| `UPLOAD_DIR` | `uploads` (in Docker: the `/app/uploads` volume). With several instances all of them must mount the same volume. | no |
+| `API_PUBLIC_URL` | `https://api.vnav.example` (origin used in image URLs) | yes in production; defaults to `http://localhost:PORT` |
+| `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL` | provider values | **not read yet** (Phase 9, with the `s3` driver) |
 | `LOG_LEVEL` | `info` | no |
 | `METRICS_TOKEN` | random | no |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | collector URL | no (tracing off when unset) |

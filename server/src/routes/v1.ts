@@ -1,12 +1,15 @@
 import { Router } from 'express';
 import type { Container } from '../container.js';
 import { createAuthController } from '../controllers/authController.js';
+import { createEventController } from '../controllers/eventController.js';
 import { createLocationController } from '../controllers/locationController.js';
 import { createSocialController } from '../controllers/socialController.js';
 import { createUserController } from '../controllers/userController.js';
 import { authenticate, requireCsrfHeaders } from '../middleware/auth.js';
 import { globalIpLimit, globalUserLimit } from '../middleware/rateLimit.js';
+import { imageUpload } from '../middleware/upload.js';
 import { validate } from '../middleware/validate.js';
+import { createEventBody, eventIdParams, listEventsQuery, mapEventsQuery, updateEventBody } from '../validators/events.js';
 import {
   changePasswordBody,
   emailOnlyBody,
@@ -30,7 +33,8 @@ import {
 export function createV1Router(c: Container): Router {
   const router = Router();
   const auth = createAuthController(c.services.auth, { cookieSecure: c.config.cookieSecure });
-  const users = createUserController(c.repos.users, c.events);
+  const users = createUserController({ users: c.repos.users, events: c.events, images: c.services.images, limiter: c.services.limiter });
+  const events = createEventController(c.services.events, c.services.sessions);
   const location = createLocationController(c.services.location);
   const social = createSocialController(c.services.friends, c.services.sessions);
 
@@ -60,6 +64,8 @@ export function createV1Router(c: Container): Router {
   router.get('/users/me', ...authed, users.me);
   router.patch('/users/me', ...authed, validate({ body: updateProfileBody }), users.updateMe);
   router.patch('/users/me/privacy', ...authed, validate({ body: updatePrivacyBody }), users.updatePrivacy);
+  router.put('/users/me/avatar', ...authed, imageUpload, users.setAvatar);
+  router.delete('/users/me/avatar', ...authed, users.removeAvatar);
   // /users/lookup must be registered before /users/:userId.
   router.get('/users/lookup', ...authed, validate({ query: lookupQuery }), social.lookup);
   router.get('/users/:userId', ...authed, validate({ params: userIdParams }), social.getUser);
@@ -82,6 +88,18 @@ export function createV1Router(c: Container): Router {
   // ── Location (own state only) ──
   router.get('/location/sharing', ...authed, location.sharing);
   router.post('/location/sharing/stop', ...authed, location.stop);
+
+  // ── Events ──
+  router.get('/events', ...authed, validate({ query: listEventsQuery }), events.list);
+  // /events/map must be registered before /events/:id.
+  router.get('/events/map', ...authed, validate({ query: mapEventsQuery }), events.map);
+  router.post('/events', ...authed, validate({ body: createEventBody }), events.create);
+  router.get('/events/:id', ...authed, validate({ params: eventIdParams }), events.get);
+  router.patch('/events/:id', ...authed, validate({ params: eventIdParams, body: updateEventBody }), events.update);
+  router.delete('/events/:id', ...authed, validate({ params: eventIdParams }), events.remove);
+  // Params are validated before the upload is read, so a bad id never costs a 5 MB parse.
+  router.put('/events/:id/image', ...authed, validate({ params: eventIdParams }), imageUpload, events.setImage);
+  router.delete('/events/:id/image', ...authed, validate({ params: eventIdParams }), events.removeImage);
 
   return router;
 }

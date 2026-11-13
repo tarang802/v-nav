@@ -1,6 +1,7 @@
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { type Express } from 'express';
+import { LocalStorage } from './storage/storage.js';
 import helmet from 'helmet';
 import type { Container } from './container.js';
 import { createHealthController } from './controllers/healthController.js';
@@ -38,6 +39,25 @@ export function createApp(c: Container): Express {
       maxAge: 600,
     }),
   );
+  // Processed images (always WebP, re-encoded by the server). Only with local storage;
+  // an object-storage adapter serves its own URLs.
+  if (c.storage instanceof LocalStorage) {
+    app.use(
+      '/uploads',
+      express.static(c.storage.root, {
+        index: false,
+        dotfiles: 'deny',
+        redirect: false,
+        immutable: true,
+        maxAge: '365d', // keys are random and never reused
+        setHeaders: (res) => {
+          res.setHeader('Content-Type', 'image/webp');
+          res.setHeader('X-Content-Type-Options', 'nosniff');
+        },
+      }),
+    );
+  }
+
   app.use(express.json({ limit: '100kb', strict: true }));
   app.use(cookieParser());
 
