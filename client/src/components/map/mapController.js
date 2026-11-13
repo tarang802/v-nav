@@ -9,6 +9,16 @@ let events = null
 /** Latest events GeoJSON; kept so it can be applied when the map finishes loading. */
 let eventData = null
 
+/** People who ask their system for reduced motion get an instant jump instead of a flying camera. */
+const prefersReducedMotion = () =>
+  typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
+
+function moveCamera(options) {
+  if (!map) return
+  if (prefersReducedMotion()) map.jumpTo(options)
+  else map.flyTo({ ...options, essential: true })
+}
+
 export const mapController = {
   attach(instance, layers) {
     map = instance
@@ -20,10 +30,10 @@ export const mapController = {
     events = null
   },
   flyTo({ lng, lat }, zoom = 18) {
-    map?.flyTo({ center: [lng, lat], zoom, essential: true })
+    moveCamera({ center: [lng, lat], zoom })
   },
   resetView() {
-    map?.flyTo({ ...CAMPUS_VIEW, essential: true })
+    moveCamera({ ...CAMPUS_VIEW })
   },
   /** GeoJSON FeatureCollection from `GET /events/map`, or null to clear. */
   setEventCollection(collection) {
