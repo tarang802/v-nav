@@ -12,9 +12,9 @@ import { useAuthStore } from '../stores/authStore.js'
 import { locationStore } from '../stores/locationStore.js'
 
 const CONNECTION = {
-  online: { label: 'Live', dot: 'bg-emerald-500' },
-  connecting: { label: 'Reconnecting…', dot: 'bg-amber-500' },
-  offline: { label: 'Offline', dot: 'bg-slate-400' },
+  online: { label: 'Live', dot: 'bg-emerald-500', hint: 'Connected. Friends and events update as they change.' },
+  connecting: { label: 'Reconnecting…', dot: 'bg-amber-500', hint: 'Connection lost. What you see may be out of date until it is back.' },
+  offline: { label: 'Offline', dot: 'bg-slate-400', hint: 'Not connected to the server.' },
 }
 
 /**
@@ -67,7 +67,7 @@ export default function AppShell() {
       <header className="pointer-events-none absolute inset-x-0 top-0 z-10 flex items-start justify-between gap-3 p-3">
         <div className="pointer-events-auto flex items-center gap-3 rounded-2xl bg-white px-4 py-2 shadow-lg ring-1 ring-slate-200">
           <span className="text-base font-bold tracking-tight text-brand-700">V-Nav</span>
-          <span className="flex items-center gap-1.5 text-xs text-slate-600" role="status" aria-live="polite">
+          <span className="flex items-center gap-1.5 text-xs text-slate-600" role="status" aria-live="polite" title={status.hint}>
             <span className={`h-2 w-2 rounded-full ${status.dot}`} aria-hidden="true" />
             {status.label}
           </span>
